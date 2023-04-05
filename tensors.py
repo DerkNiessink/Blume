@@ -1,7 +1,6 @@
 import numpy as np
 from scipy.linalg import sqrtm
 from ncon import ncon
-
 from dataclasses import dataclass
 
 
@@ -23,16 +22,30 @@ class Tensors:
             )
         )
 
-    def kronecker_matrix(self, n) -> np.array:
+    def kronecker_tensor(self, n) -> np.array:
         """Returns a rank-4 kronecker delta matrix of shape n"""
         A = np.zeros((n, n, n, n))
         for i in range(n):
             A[i, i, i, i] = 1
         return A
 
-    def lattice_tensor(self) -> np.array:
+    def lattice_tensor_a(self) -> np.array:
+        """Returns the tensor representation of the partition function"""
         Q = self.transfer_matrix()
-        delta = self.kronecker_matrix(2)
+        delta = self.kronecker_tensor(2)
         return ncon(
             [Q, Q, Q, Q, delta], ([-1, 1], [-2, 2], [-3, 3], [-4, 4], [1, 2, 3, 4])
+        )
+
+    def lattice_tensor_b(self) -> np.array:
+        """Returns the tensor representation of the numerator of the magnetization
+        (partition function = denominator)"""
+        Q = self.transfer_matrix()
+        delta = self.kronecker_tensor(2)
+        delta[1, :, :, :] *= -1.0
+        return np.around(
+            ncon(
+                [Q, Q, Q, Q, delta], ([-1, 1], [-2, 2], [-3, 3], [-4, 4], [1, 2, 3, 4])
+            ),
+            15,
         )

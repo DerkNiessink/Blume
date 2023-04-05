@@ -7,7 +7,7 @@ from tensors import Tensors
 class TestTensors(unittest.TestCase):
     def setUp(self):
         self.shape = 5
-        self.delta = Tensors.kronecker_matrix(Mock, self.shape)
+        self.delta = Tensors.kronecker_tensor(Mock, self.shape)
 
     def test_shape(self):
         # There are shape^4 combinations of indices of a rank-4 tensor
