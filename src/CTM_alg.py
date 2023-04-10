@@ -1,5 +1,5 @@
-from src.tensors import Tensors
-from src.tensors import Methods
+from tensors import Tensors
+from tensors import Methods
 
 norm = Methods.normalize
 symm = Methods.symmetrize
@@ -95,11 +95,20 @@ class CtmAlg:
         """
         M = np.reshape(M, (self.chi * self.d, self.chi * self.d))
         (w, U) = scipy.linalg.eigh(M, eigvals_only=False)
-        # Only keep the eigenvectors corresponding to the chi largest
-        # eigenvalues
-        U = U[:, -self.chi :]
-        # Reshape U back in a three legged tensor
-        return np.reshape(U, (self.chi, self.chi, self.d))
+
+        # Sort the eigen vectors based on the abs of the eigenvalues.
+        eigvecs = [column for column in U.T]
+        U_sorted = np.array(self.sorted_eigvecs(w, eigvecs)).T
+        # Truncate and reshape U back in a three legged tensor
+        return np.reshape(U_sorted[:, -self.chi :], (self.chi, self.chi, self.d))
+
+    def sorted_eigvecs(self, w: np.array, eigenvectors: list):
+        """
+        Sort the list of eigenvectors, based on the absolute value of the
+        corresponding eigenvalues array
+        """
+        tups = [x for x in zip(w, eigenvectors)]
+        return [v for _, v in sorted(tups, key=lambda x: abs(x[0]))]
 
     def Z(self) -> float:
         """

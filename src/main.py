@@ -4,8 +4,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 
-alg = CtmAlg(beta=0.5, chi=8)
-alg.exe(n_steps=100)
+alg = CtmAlg(beta=0.5, chi=4)
+alg.exe(n_steps=1000)
 print(f"Z = {alg.Z()}")
 print(f"m = {alg.m()}")
 
