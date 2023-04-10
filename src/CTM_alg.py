@@ -1,4 +1,8 @@
-from tensors import Tensors
+from src.tensors import Tensors
+from src.tensors import Methods
+
+norm = Methods.normalize
+symm = Methods.symmetrize
 
 import numpy as np
 import scipy.linalg
@@ -31,14 +35,21 @@ class CtmAlg:
         every step.
         """
         for _ in tqdm(range(n_steps)):
-            self.C = self._eval_corner()
-            self.C = self._symmetrize(self._normalize(self.C))
-            self.T = self._eval_edge()
-            self.T = self._symmetrize(self._normalize(self.T))
+            # Compute the new contraction `M` of the corner by inserting an `a` tensor.
+            M = self.new_M()
+
+            # Use `M` to compute the renormalization tensor
+            U = self.new_U(M)
+
+            # Normalize and symmetrize the new corner and edge tensors
+            self.C = symm(norm(self.new_C(U)))
+            self.T = symm(norm(self.new_T(U)))
+
+            # Save singular values of C
             _, s, _ = np.linalg.svd(self.C)
             self.sv_sums.append(np.sum(s))
 
-    def _eval_corner(self) -> np.array:
+    def new_C(self, U: np.array) -> np.array:
         """
         Insert an `a` tensor and evaluate a corner matrix `M_matrix` by contracting
         the new corner and reshaping it in a matrix. Conduct an eigenvalue
@@ -46,29 +57,22 @@ class CtmAlg:
         corresponding eigenvectors. Renormalized the new corner with the new
         `U` matrix in which the columns are the eigenvectors.
         """
-        M_matrix = self._eval_M()
-        self.trunc_U = self._truncated_U(M_matrix)
-        M = ncon(
-            [self.C, self.T, self.T, self.a],
-            ([1, 2], [-1, 1, 3], [2, -2, 4], [-3, -4, 3, 4]),
-        )
         return ncon(
-            [self.trunc_U, M, self.trunc_U.T],
+            [U, self.new_M(), U.T],
             ([1, -1, 2], [1, 3, 2, 4], [4, 3, -2]),
         )
 
-    def _eval_M(self) -> np.array:
+    def new_M(self) -> np.array:
         """
         evaluate the `M_matrix`, i.e. the new corner with the inserted `a`
         tensor, and reshape to a matrix of shape (chi*d x chi*d).
         """
-        M = ncon(
+        return ncon(
             [self.C, self.T, self.T, self.a],
             ([1, 2], [-1, 1, 3], [2, -2, 4], [-3, -4, 3, 4]),
         )
-        return np.reshape(M, (self.chi * self.d, self.chi * self.d))
 
-    def _eval_edge(self) -> np.array:
+    def new_T(self, U: np.array) -> np.array:
         """
         Insert an `a` tensor and evaluate a new edge tensor. Renormalize
         the edge tensor by contracting with the truncated `U` tensor, obtained
@@ -76,12 +80,12 @@ class CtmAlg:
         """
         M = ncon([self.T, self.a], ([-1, -2, 1], [-3, -4, -5, 1]))
         T = ncon(
-            [self.trunc_U, self.trunc_U.T, M],
+            [U, U.T, M],
             ([-3, 3, 4], [2, 1, -1], [3, 1, 4, -2, 2]),
         )
         return np.transpose(T, (0, 2, 1))
 
-    def _truncated_U(self, M: np.array) -> np.array:
+    def new_U(self, M: np.array) -> np.array:
         """
         Return the truncated U matrix, by conducting an eigenvalue
         decomposition on the given corner matrix `M`. U is the matrix
@@ -89,25 +93,13 @@ class CtmAlg:
         by removing a number of lowest eigenvalues, which is equal to
         the number of bonds (chi).
         """
+        M = np.reshape(M, (self.chi * self.d, self.chi * self.d))
         (w, U) = scipy.linalg.eigh(M, eigvals_only=False)
         # Only keep the eigenvectors corresponding to the chi largest
         # eigenvalues
         U = U[:, -self.chi :]
-        # Reshape U back in a three legged tensor        # Contract the inserted a matrix and the edge matrix T.
+        # Reshape U back in a three legged tensor
         return np.reshape(U, (self.chi, self.chi, self.d))
-
-    def _symmetrize(self, M) -> np.array:
-        """
-        Symmetrize the given tensor M about the first two axes.
-        """
-        axes = (1, 0) if len(np.shape(M)) == 2 else (1, 0, 2)
-        return np.maximum(M, np.transpose(M, axes))
-
-    def _normalize(self, M) -> np.array:
-        """
-        Divide the given tensor M by its largest value.
-        """
-        return M / np.amax(M)
 
     def Z(self) -> float:
         """
