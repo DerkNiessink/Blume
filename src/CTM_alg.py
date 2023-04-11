@@ -1,13 +1,15 @@
-from tensors import Tensors
-from tensors import Methods
-
-norm = Methods.normalize
-symm = Methods.symmetrize
-
 import numpy as np
 import scipy.linalg
 from ncon import ncon
 from tqdm import tqdm
+
+try:
+    from src.tensors import Tensors, Methods
+except:
+    from tensors import Tensors, Methods
+
+norm = Methods.normalize
+symm = Methods.symmetrize
 
 
 class CtmAlg:
@@ -26,6 +28,7 @@ class CtmAlg:
         self.a = self.tensors.a_tensor()
         self.b = self.tensors.b_tensor()
         self.sv_sums = []
+        self.magnetizations = []
 
     def exe(self, n_steps: int):
         """
@@ -45,9 +48,10 @@ class CtmAlg:
             self.C = symm(norm(self.new_C(U)))
             self.T = symm(norm(self.new_T(U)))
 
-            # Save singular values of C
+            # Save singular values of C and magnetization
             _, s, _ = np.linalg.svd(self.C)
             self.sv_sums.append(np.sum(s))
+            self.magnetizations.append(self.m())
 
     def new_C(self, U: np.array) -> np.array:
         """
@@ -58,8 +62,8 @@ class CtmAlg:
         `U` matrix in which the columns are the eigenvectors.
         """
         return ncon(
-            [U, self.new_M(), U.T],
-            ([1, -1, 2], [1, 3, 2, 4], [4, 3, -2]),
+            [U, self.new_M(), U],
+            ([-1, 2, 1], [1, 2, 3, 4], [-2, 4, 3]),
         )
 
     def new_M(self) -> np.array:
@@ -69,7 +73,7 @@ class CtmAlg:
         """
         return ncon(
             [self.C, self.T, self.T, self.a],
-            ([1, 2], [-1, 1, 3], [2, -2, 4], [-3, -4, 3, 4]),
+            ([1, 2], [-3, 2, 3], [-1, 1, 4], [-2, -4, 3, 4]),
         )
 
     def new_T(self, U: np.array) -> np.array:
@@ -79,11 +83,10 @@ class CtmAlg:
         from the eigenvalue decomposition of the new corner tensor.
         """
         M = ncon([self.T, self.a], ([-1, -2, 1], [-3, -4, -5, 1]))
-        T = ncon(
-            [U, U.T, M],
-            ([-3, 3, 4], [2, 1, -1], [3, 1, 4, -2, 2]),
+        return ncon(
+            [U, M, U],
+            ([-1, 4, 2], [2, 1, 3, 4, -3], [-2, 3, 1]),
         )
-        return np.transpose(T, (0, 2, 1))
 
     def new_U(self, M: np.array) -> np.array:
         """
@@ -98,9 +101,10 @@ class CtmAlg:
 
         # Sort the eigen vectors based on the abs of the eigenvalues.
         eigvecs = [column for column in U.T]
-        U_sorted = np.array(self.sorted_eigvecs(w, eigvecs)).T
+        U_sorted = np.array(self.sorted_eigvecs(w, eigvecs))
+
         # Truncate and reshape U back in a three legged tensor
-        return np.reshape(U_sorted[:, -self.chi :], (self.chi, self.chi, self.d))
+        return np.reshape(U_sorted[:, -self.chi :], (self.chi, self.d, self.chi))
 
     def sorted_eigvecs(self, w: np.array, eigenvectors: list):
         """

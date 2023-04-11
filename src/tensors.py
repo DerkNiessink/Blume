@@ -77,7 +77,7 @@ class Methods:
             raise Exception("M has to a 2 or 3 dimensional array.")
 
         axes = (1, 0) if len(M.shape) == 2 else (1, 0, 2)
-        return np.maximum(M, np.transpose(M, axes))
+        return (M + np.transpose(M, axes)) / 2
 
     @staticmethod
     def normalize(M: np.array) -> np.array:
