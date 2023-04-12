@@ -23,10 +23,10 @@ class CtmAlg:
         self.tensors = Tensors(beta=beta)
         self.chi = chi
         self.d = n_states
-        self.C = self.tensors.random_tensor((chi, chi))
-        self.T = self.tensors.random_tensor((chi, chi, self.d))
-        self.a = self.tensors.a_tensor()
-        self.b = self.tensors.b_tensor()
+        self.C = self.tensors.random((chi, chi))
+        self.T = self.tensors.random((chi, chi, self.d))
+        self.a = self.tensors.a()
+        self.b = self.tensors.b()
         self.sv_sums = []
         self.magnetizations = []
 

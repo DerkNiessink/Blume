@@ -1,4 +1,5 @@
 from src.CTM_alg import CtmAlg
+from src.tensors import Tensors, Methods
 
 import unittest
 import numpy as np
@@ -10,6 +11,7 @@ class TestCtmAlg(unittest.TestCase):
         self.chi = 2
         self.d = 2
         self.alg = CtmAlg(beta=0.5, chi=self.chi, n_states=self.d)
+        self.tensors = Tensors()
 
         # 1 step of the algorithm:
         self.M = self.alg.new_M()
@@ -60,12 +62,67 @@ class TestCtmAlg(unittest.TestCase):
 
     def test_unitarity(self):
         """
-        Test that the renormalization matrix U is unitary
+        Test that the renormalization matrix U is unitary.
         """
         product = ncon([self.U, self.U], ([-1, 1, 2], [-2, 1, 2]))
         self.assertTrue(
             np.allclose(product, np.identity(self.chi), rtol=1e-6, atol=1e-6),
             f"The renormalization tensor U is not unitary,\n U*U.T = \n{product}",
+        )
+
+    def test_small_system(self):
+        """
+        Compare a contracted 5x5 system with one step of the algorithm.
+        """
+        corner = Methods.normalize(
+            ncon(
+                [
+                    self.tensors.C_init(),
+                    self.tensors.T_init(),
+                    self.tensors.T_init(),
+                    self.tensors.a(),
+                ],
+                ([1, 2], [-3, 2, 3], [-1, 1, 4], [-2, -4, 3, 4]),
+            )
+        )
+        edge = Methods.normalize(
+            ncon(
+                [self.tensors.T_init(), self.tensors.a()],
+                ([-1, -2, 1], [-3, -4, -5, 1]),
+            )
+        )
+        Z = ncon(
+            [
+                corner,
+                edge,
+                edge,
+                corner,
+                self.tensors.a(),
+                corner,
+                edge,
+                edge,
+                corner,
+            ],
+            (
+                [1, 2, 3, 4],
+                [3, 4, 5, 18, 6],
+                [1, 2, 15, 21, 16],
+                [5, 6, 7, 8],
+                [18, 19, 20, 21],
+                [9, 10, 11, 12],
+                [7, 8, 9, 19, 10],
+                [11, 12, 13, 20, 14],
+                [13, 14, 15, 16],
+            ),
+        )
+
+        alg = CtmAlg(beta=0.5, chi=8)
+        alg.exe(n_steps=1)
+        self.assertAlmostEqual(
+            Z,
+            alg.Z(),
+            "The theoretical partition function of the 5x5 system is not equal\
+            to one estimated with the algorithm.",
         )
 
 

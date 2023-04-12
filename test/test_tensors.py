@@ -8,27 +8,27 @@ class TestTensors(unittest.TestCase):
     def setUp(self):
         self.tensors = Tensors()
 
-    def test_kronecker_tensor(self):
-
-        for shape in [2, 4, 7, 9]:
-
-            # There are shape^4 combinations of indices of a rank-4 tensor
-            for i in range(shape**4):
-                # Convert to the right base and add leading zeros
-                index = np.base_repr(i, base=shape).rjust(4, "0")
-                val = Tensors.kronecker_tensor(shape)[
-                    int(index[0]), int(index[1]), int(index[2]), int(index[3])
-                ]
+    def test_delta(self):
+        """
+        Test that the delta tensor gives 1 if all indices are equal, else gives 0.
+        """
+        shapes = [(2, 2), (4, 4), (2, 2, 2), (3, 3, 3), (2, 2, 2, 2)]
+        for shape in shapes:
+            delta = Tensors.delta(shape)
+            for index in np.ndindex(shape):
                 with self.subTest():
-
-                    if index == index[0] * len(index):
-                        self.assertEqual(val, 1, f"delta({index}) should be 1")
+                    # If all indices are the same.
+                    if index.count(index[0]) == len(index):
+                        self.assertEqual(delta[index], 1, f"delta({index}) should be 1")
                     else:
-                        self.assertEqual(val, 0, f"delta({index}) should be 0")
+                        self.assertEqual(delta[index], 0, f"delta({index}) should be 0")
 
-    def test_random_tensor(self):
+    def test_random(self):
+        """
+        Test the symmetry and normality of the random tensor.
+        """
         for shape in [(3, 3), (2, 2), (5, 5), (4, 4, 3), (8, 8, 8), (5, 5, 8)]:
-            c = Tensors.random_tensor(shape)
+            c = Tensors.random(shape)
             with self.subTest():
                 # Exchange the first two indices.
                 axes = (1, 0, 2) if len(shape) == 3 else (1, 0)
@@ -38,7 +38,10 @@ class TestTensors(unittest.TestCase):
                 )
                 self.assertTrue((0 <= c.all() <= 1), "Values are not normalized")
 
-    def test_a_tensor(self):
+    def test_a(self):
+        """
+        Test that the a tensor equals the theoretical tensor.
+        """
         theory_a = np.array(
             [
                 [
@@ -52,11 +55,14 @@ class TestTensors(unittest.TestCase):
             ]
         )
         self.assertTrue(
-            np.allclose(theory_a, self.tensors.a_tensor(), rtol=1e-8, atol=1e-8),
+            np.allclose(theory_a, self.tensors.a(), rtol=1e-8, atol=1e-8),
             "The computed lattice tensor `a` does not agree with the theoretical tensor.",
         )
 
-    def test_b_tensor(self):
+    def test_b(self):
+        """
+        Test that the b tensor equals the theoretical tensor
+        """
         theory_b = np.array(
             [
                 [
@@ -70,8 +76,28 @@ class TestTensors(unittest.TestCase):
             ]
         )
         self.assertTrue(
-            np.allclose(theory_b, self.tensors.b_tensor(), rtol=1e-8, atol=1e-8),
+            np.allclose(theory_b, self.tensors.b(), rtol=1e-8, atol=1e-8),
             "The computed lattice tensor `b` does not agree with the theoretical tensor.",
+        )
+
+    def test_C_init(self):
+        """
+        Test the shape of C_init.
+        """
+        self.assertEqual(
+            self.tensors.C_init().shape,
+            (self.tensors.d, self.tensors.d),
+            "C_init does not have the right shape.",
+        )
+
+    def test_T_init(self):
+        """
+        Test the shape of T_init.
+        """
+        self.assertEqual(
+            self.tensors.T_init().shape,
+            (self.tensors.d, self.tensors.d, self.tensors.d),
+            "T_init does not have the right shape.",
         )
 
 

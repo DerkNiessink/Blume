@@ -10,6 +10,7 @@ class Tensors:
     renormalization group (CTMRG) method for evualuating the Ising model"""
 
     beta: float = 0.5
+    d: int = 2
     Q = sqrtm(
         np.array(
             [
@@ -20,17 +21,23 @@ class Tensors:
     )
 
     @staticmethod
-    def kronecker_tensor(n: int) -> np.array:
+    def delta(shape: tuple[int]) -> np.array:
         """
-        Returns a rank-4 kronecker delta matrix of shape n
+        Returns a kronecker delta matrix of specific shape. The length of all
+        dimensions of the shape has to be equal.
         """
-        A = np.zeros((n, n, n, n))
-        for i in range(n):
-            A[i, i, i, i] = 1
+        if shape.count(shape[0]) != len(shape):
+            raise Exception("The length of all dimensions has to be equal.")
+
+        A = np.zeros(shape)
+        for index in np.ndindex(shape):
+            # If all indices are the same, change value to 1.
+            if index.count(index[0]) == len(index):
+                A[index] = 1
         return A
 
     @staticmethod
-    def random_tensor(shape: tuple) -> np.array:
+    def random(shape: tuple) -> np.array:
         """
         Returns a random tensor of specific shape, which can be either rank 2
         or rank 3. The tensor is symmetric under the exchange of the first two
@@ -39,27 +46,44 @@ class Tensors:
         c = np.random.uniform(size=shape)
         return Methods.symmetrize(c)
 
-    def a_tensor(self) -> np.array:
+    def a(self) -> np.array:
         """
         Returns the tensor representation of a single lattice site in the
         partition function.
         """
-        delta = self.kronecker_tensor(2)
+        delta = self.delta((self.d, self.d, self.d, self.d))
         return ncon(
             [self.Q, self.Q, self.Q, self.Q, delta],
             ([-1, 1], [-2, 2], [-3, 3], [-4, 4], [1, 2, 3, 4]),
         )
 
-    def b_tensor(self) -> np.array:
+    def b(self) -> np.array:
         """
         Returns the tensor representation for a single lattice site in the
         numerator of the magnetization (partition function = denominator).
         """
-        delta = self.kronecker_tensor(2)
+        delta = self.delta((self.d, self.d, self.d, self.d))
         delta[1, :, :, :] *= -1.0
         return ncon(
             [self.Q, self.Q, self.Q, self.Q, delta],
             ([-1, 1], [-2, 2], [-3, 3], [-4, 4], [1, 2, 3, 4]),
+        )
+
+    def C_init(self) -> np.array:
+        """
+        Returns the initial corner tensor for a system with boundary conditions.
+        """
+        return ncon(
+            [self.Q, self.delta((self.d, self.d)), self.Q], ([1, -1], [1, 2], [-2, 2])
+        )
+
+    def T_init(self) -> np.array:
+        """
+        Returns the initial edge tensor for a system with boundary conditions.
+        """
+        return ncon(
+            [self.Q, self.Q, self.Q, self.delta((self.d, self.d, self.d))],
+            ([-1, 1], [-2, 2], [-3, 3], [1, 2, 3]),
         )
 
 
