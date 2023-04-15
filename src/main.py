@@ -4,13 +4,18 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 
-alg = CtmAlg(beta=0.5, chi=16)
-alg.exe(n_steps=1000)
+alg = CtmAlg(beta=0.1, chi=16)
+alg.exe(max_steps=1000, tol=1e-4)
 print(f"Z = {alg.Z()}")
 print(f"m = {alg.m()}")
 
-plt.plot(np.abs(np.diff(alg.sv_sums)))
+plt.plot((np.diff(alg.sv_sums)))
 plt.ylabel("abs diff sum singular values of C")
+plt.xlabel("n steps")
+plt.show()
+
+plt.plot(alg.partition_functions)
+plt.ylabel("Z")
 plt.xlabel("n steps")
 plt.show()
 

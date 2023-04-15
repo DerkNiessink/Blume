@@ -1,7 +1,7 @@
 import numpy as np
 from scipy.linalg import sqrtm
 from ncon import ncon
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 
 @dataclass
@@ -11,14 +11,17 @@ class Tensors:
 
     beta: float = 0.5
     d: int = 2
-    Q = sqrtm(
-        np.array(
-            [
-                [np.exp(beta), np.exp(-beta)],
-                [np.exp(-beta), np.exp(beta)],
-            ]
+    Q: np.array = field(init=False)
+
+    def __post_init__(self):
+        self.Q = sqrtm(
+            np.array(
+                [
+                    [np.exp(self.beta), np.exp(-self.beta)],
+                    [np.exp(-self.beta), np.exp(self.beta)],
+                ]
+            )
         )
-    )
 
     @staticmethod
     def delta(shape: tuple[int]) -> np.array:
