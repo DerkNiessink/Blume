@@ -13,13 +13,17 @@ class TestCtmAlg(unittest.TestCase):
 
     @classmethod
     def setUpClass(self):
-        self.chi = 4
+        """
+        Set up the algorithm which is used for: `test_shapes`, `test_symmetry`
+        and `test_unitarity`.
+        """
+        self.chi = 8
         self.d = 2
-        self.alg = CtmAlg(beta=1, chi=self.chi, n_states=self.d)
+        self.alg = CtmAlg(beta=0.5, chi=self.chi, n_states=self.d)
         self.alg.exe(max_steps=10)
         self.tensors = Tensors()
 
-        # second step of the algorithm:
+        # next steps of the algorithm:
         self.M = self.alg.new_M()
         self.U, _ = self.alg.new_U(self.M)
         self.untrunc_U, _ = self.alg.new_U(self.M, False)
@@ -39,6 +43,12 @@ class TestCtmAlg(unittest.TestCase):
         with self.subTest():
             self.assertEqual(
                 self.U.shape, (self.chi, self.d, self.chi), "U is not the right shape."
+            )
+        with self.subTest():
+            self.assertEqual(
+                self.untrunc_U.shape,
+                (self.chi, self.d, 2 * self.chi),
+                "the untruncated U is not the right shape.",
             )
         with self.subTest():
             self.assertEqual(
@@ -69,10 +79,10 @@ class TestCtmAlg(unittest.TestCase):
 
     def test_unitarity(self):
         """
-        Test that the untruncated renormalization matrix U is unitary.
+        Test that the untruncated renormalization tensor U is unitary.
         """
         untrunc_product = ncon(
-            [self.untrunc_U, self.untrunc_U], ([-1, 1, 2], [-2, 1, 2])
+            [self.untrunc_U, self.untrunc_U], ([2, 1, -1], [2, 1, -2])
         )
         product = ncon([self.U, self.U], ([-1, 1, 2], [-2, 1, 2]))
 
@@ -89,12 +99,27 @@ class TestCtmAlg(unittest.TestCase):
                 f"The truncated renormalization tensor U is not unitary,\n U*U.T = \n{product}",
             )
 
+    def test_magnetization(self):
+        """
+        Test that the algorithm gives a known value for the magnetization.
+        """
+        m_known = 0.911319  # known magnetization for beta = 0.5.
+        alg = CtmAlg(beta=0.5, chi=8)
+        alg.exe(tol=1e-7)
+        self.assertAlmostEqual(
+            m_known,
+            abs(alg.m()),
+            places=6,
+            msg="The known m for beta = 0.5, does not equal the m obtained"
+            " from the algorithm",
+        )
+
     def test_small_system(self):
         """
         Compare two contracted corners of the 5x5 system with one step of the algorithm.
         """
 
-        # "Manual" calculation of two contract corners.
+        # "Manual" calculation of two contracted corners.
         corner = ncon(
             [
                 self.tensors.C_init(),
@@ -112,11 +137,9 @@ class TestCtmAlg(unittest.TestCase):
 
         # Algorithm calculation of two contracted corners with two
         # untruncated renormalization tensors U in between.
-        print(M.shape)
-        print(untrunc_U.shape)
         two_corners_alg = ncon(
             [M, untrunc_U, untrunc_U, M],
-            ([-1, -2, 1, 2], [3, 2, 1], [3, 4, 5], [-3, -4, 5, 4]),
+            ([-1, -2, 1, 2], [2, 1, 3], [4, 5, 3], [-3, -4, 5, 4]),
         )
         # The two should yield the same outcome if the untruncated U is unitary
         self.assertTrue(np.allclose(two_corners, two_corners_alg, rtol=1e-6, atol=1e-6))

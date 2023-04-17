@@ -2,21 +2,27 @@ from CTM_alg import CtmAlg
 
 import numpy as np
 import json
+from tqdm import tqdm
 
-for chi in [2, 4, 8, 16, 32]:
+for chi in [4, 8, 12, 24]:
     data = []
-    for beta in np.arange(0.4, 0.55, 0.001):
+    for beta in tqdm(np.arange(0.33, 0.67, 0.0001), desc=f"Chi = {chi}"):
         alg = CtmAlg(beta, chi=chi)
-        alg.exe(tol=1e-6, max_steps=10000)
-        data.append((beta, alg.Z(), abs(alg.m())))
+        alg.exe(tol=1e-7, max_steps=100000)
 
-    data = list(zip(*data))
-    with open(f"data/data_chi{chi}.json", "w") as fp:
+        # Save temperature, partition function, magnetization and free energy
+        data.append((1 / beta, alg.Z(), abs(alg.m()), alg.f()))
+
+    data = [chi] + list(zip(*data))
+
+    with open(f"data/chi{chi}.json", "w") as fp:
         json.dump(
             {
-                "betas": data[0],
-                "partition functions": data[1],
-                "magnetizations": data[2],
+                "chi": data[0],
+                "temperatures": data[1],
+                "partition functions": data[2],
+                "magnetizations": data[3],
+                "free energies": data[4],
             },
             fp,
         )

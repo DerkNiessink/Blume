@@ -2,7 +2,6 @@ import numpy as np
 import scipy.sparse.linalg
 import scipy.linalg
 from ncon import ncon
-from tqdm import tqdm
 
 try:
     from src.tensors import Tensors, Methods
@@ -15,13 +14,13 @@ symm = Methods.symmetrize
 
 class CtmAlg:
     """
-    Class for conducting the Corner Transfer Matrix (CTM) algorithm for
-    evualuating the partition function and other physical properties of the
-    Ising model.
+    Class for the Corner Transfer Matrix (CTM) algorithm for evualuating the
+    partition function and other physical properties of the Ising model.
     """
 
     def __init__(self, beta: float, boundary_conditions=False, chi=2, n_states=2):
         self.tensors = Tensors(beta)
+        self.beta = beta
         self.b_c = boundary_conditions
         self.chi = chi
         self.d = n_states
@@ -48,11 +47,14 @@ class CtmAlg:
         """
         Execute the CTM algorithm for a number of steps `n_steps`. For each
         step, an `a` tensor is inserted, from which a new edge and corner tensor
-        is evaluated. The new edge and corner tensors are normalized and symmetrized
-        every step.
+        is evaluated. The new edge and corner tensors are normalized and
+        symmetrized every step.
+
+        `tol` (float): convergence criterion.
+        `max_steps` (int): maximum number of steps before terminating the
+        algorithm when convergered has not yet been reached.
         """
-        msg = "\nMax steps reached \u2717\n"
-        for _ in tqdm(range(max_steps), desc="Percentage of max steps"):
+        for _ in range(max_steps):
             # Compute the new contraction `M` of the corner by inserting an `a` tensor.
             M = self.new_M()
 
@@ -69,18 +71,16 @@ class CtmAlg:
             self.partition_functions.append(self.Z())
 
             if abs(self.sv_sums[-1] - self.sv_sums[-2]) < tol:
-                msg = "\nConvergence reached \u2713\n"
                 break
-
-        print(msg)
 
     def new_C(self, U: np.array) -> np.array:
         """
-        Insert an `a` tensor and evaluate a corner matrix `M_matrix` by contracting
-        the new corner and reshaping it in a matrix. Conduct an eigenvalue
-        decomposition and only keep the `chi` largest eigenvalues and
-        corresponding eigenvectors. Renormalized the new corner with the new
-        `U` matrix in which the columns are the eigenvectors.
+        Insert an `a` tensor and evaluate a corner matrix `new_M` by contracting
+        the new corner. Renormalized the new corner with the given `U` matrix.
+
+        `U` (np.array): The renormalization tensor of shape (chi, d, chi).
+
+        Returns an array of the new corner tensor of shape (chi, chi)
         """
         return ncon(
             [U, self.new_M(), U],
@@ -89,8 +89,10 @@ class CtmAlg:
 
     def new_M(self) -> np.array:
         """
-        evaluate the `M_matrix`, i.e. the new corner with the inserted `a`
+        evaluate the `M`, i.e. the new contracted corner with the inserted `a`
         tensor.
+
+        Returns am array of the contracted corner of shape (chi, d, chi, d).
         """
         return ncon(
             [self.C, self.T, self.T, self.a],
@@ -100,8 +102,9 @@ class CtmAlg:
     def new_T(self, U: np.array) -> np.array:
         """
         Insert an `a` tensor and evaluate a new edge tensor. Renormalize
-        the edge tensor by contracting with the truncated `U` tensor, obtained
-        from the eigenvalue decomposition of the new corner tensor.
+        the edge tensor by contracting with the given truncated `U` tensor.
+
+        `U` (np.array): The renormalization tensor of shape (chi, d, chi).
         """
         M = ncon([self.T, self.a], ([-1, -2, 1], [1, -3, -4, -5]))
         return ncon(
@@ -111,21 +114,33 @@ class CtmAlg:
 
     def new_U(self, M: np.array, trunc=True) -> tuple[np.array, np.array]:
         """
-        Return a tuple of the truncated U and s matrix, by conducting an
-        eigenvalue decomposition on the given corner matrix `M`. U is the
-        matrix with the eigenvectors as columns and s the diagonal matrix
-        with singular values. These matrices are truncated by removing a
-        number of lowest eigenvalues, which is equal to the number of bonds (chi).
+        Return a tuple of the truncated `U` tensor and `s` matrix, by conducting a
+        singular value decomposition (svd) on the given corner tensor `M`. Using
+        this factorization `M` can be written as M = U s V*, where the `U` matrix
+        is used for renormalization and the `s` matrix contains the singular
+        values in descending order.
+
+        `M` (np.array): The new contracted corner tensor of shape (chi, d, chi, d).
+        `trunc` (bool): If trunc is True, the `U` and `s` matrices are truncated,
+        keeping only the singular values with the chi largest magnitude.
+
+        Returns `s` and the renormalization tensor of shape (chi, d, chi) if
+        `trunc` = True, else with shape (chi, d, 2*chi), which is obtained by reshaping
+        `U` in a rank-3 tensor and transposing.
         """
+
+        # Reshape M in a matrix
         M = np.reshape(M, (self.chi * self.d, self.chi * self.d))
-        # Get the chi largest singular values and corresponding singular vector matrix.
+
         if trunc:
+            # Get the chi largest singular values and corresponding singular vector matrix.
             k = self.chi
             U, s, _ = scipy.sparse.linalg.svds(M, k=k, which="LM")
         else:
             k = 2 * self.chi
             U, s, _ = scipy.linalg.svd(M)
-        # Truncate reshape U back in a three legged tensor
+
+        # Reshape U back in a three legged tensor and transpose
         return np.reshape(U, (k, self.d, self.chi)).T, s
 
     def Z(self) -> float:
@@ -190,3 +205,18 @@ class CtmAlg:
             )
             / self.Z()
         )
+
+    def f(self) -> float:
+        """
+        Return the free energy of the system.
+        """
+        corners = ncon(
+            [self.C, self.C, self.C, self.C], ([1, 2], [1, 3], [3, 4], [4, 2])
+        )
+        denom = (
+            ncon(
+                [self.C, self.C, self.T, self.T, self.C, self.C],
+                ([1, 2], [1, 3], [2, 5, 4], [3, 6, 4], [5, 7], [6, 7]),
+            )
+        ) ** 2
+        return float(-(1 / self.beta) * np.log(self.Z() * corners / denom))
