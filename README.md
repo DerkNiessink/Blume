@@ -1,5 +1,7 @@
 # Blume_Capel_CTM
 
+## Results
+
 ![plot](data/sv_sums.png)
 
 ![plot](./data/m_conv.png)
