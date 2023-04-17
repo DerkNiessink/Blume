@@ -2,10 +2,19 @@
 
 ## Results
 
-![plot](data/sv_sums.png)
 
-![plot](data/m_conv.png)
+| ![plot](data/sv_sums.png) | 
+|:--:| 
+| *Sum of the singular values against the number of executed steps.* |
 
-![plot](data/phase.png)
+| ![plot](data/m_conv.png) | 
+|:--:| 
+| *Magnetization (m) against the number of executed steps with* |
 
-![plot](data/free.png)
+| ![plot](data/phase.png) | 
+|:--:| 
+| *Phase diagram (magnetization (m) against temperature (T))* |
+
+| ![plot](data/free.png) | 
+|:--:| 
+| *Free energy (f) against temperature (T)* |
