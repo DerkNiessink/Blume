@@ -2,6 +2,7 @@
 
 ## Results
 
+$\beta$
 
 | ![plot](data/sv_sums.png) | 
 |:--:| 
