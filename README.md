@@ -5,7 +5,7 @@
 
 | ![plot](data/sv_sums.png) | 
 |:--:| 
-| *Sum of the singular values against the number of executed steps for $`\tau = 1e-7`$ and $`\beta = 0.5`$* |
+| *Sum of the singular values against the number of executed steps for $\tau = 1e-7$ and $\beta = 0.5$* |
 
 <br/><br/>
 
