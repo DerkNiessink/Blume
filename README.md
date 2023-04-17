@@ -1,6 +1,6 @@
 # Blume_Capel_CTM
 
-![plot](./data/sv_sums.png)
+![plot](Blume_Capel_CTM/data/sv_sums.png)
 
 ![plot](./data/m_conv.png)
 
