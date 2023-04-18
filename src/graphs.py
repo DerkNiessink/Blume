@@ -41,7 +41,7 @@ def plot_all_chi(
 
 plot_all_chi(
     [4, 8, 12, 24],
-    range=(2.15, 2.4),
+    range=(2.24, 2.3),
     y="magnetizations",
     xlabel=r"$T$",
     ylabel=r"m",
