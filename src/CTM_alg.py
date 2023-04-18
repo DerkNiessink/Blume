@@ -140,8 +140,8 @@ class CtmAlg:
             k = 2 * self.chi
             U, s, _ = scipy.linalg.svd(M)
 
-        # Reshape U back in a three legged tensor and transpose
-        return np.reshape(U, (k, self.d, self.chi)).T, s
+        # Reshape U back in a three legged tensor and transpose. Normalize the singular values.
+        return np.reshape(U, (k, self.d, self.chi)).T, norm(s)
 
     def Z(self) -> float:
         """
