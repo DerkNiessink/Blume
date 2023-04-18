@@ -55,5 +55,5 @@ plot_all_chi(
     xlabel=r"$T$",
     ylabel=r"$f$",
     fn="data/free2",
-    ymin=-2.2,
+    ymin=-2.45,
 )
