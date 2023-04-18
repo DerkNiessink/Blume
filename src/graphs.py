@@ -45,15 +45,15 @@ plot_all_chi(
     y="magnetizations",
     xlabel=r"$T$",
     ylabel=r"m",
-    fn="data/phase",
+    fn="data/phase2",
 )
 
 plot_all_chi(
     [4, 8, 12, 24],
-    range=(1.5, 4),
+    range=(1, 4),
     y="free energies",
     xlabel=r"$T$",
     ylabel=r"$f$",
-    fn="data/free",
+    fn="data/free2",
     ymin=-2.2,
 )
