@@ -98,10 +98,8 @@ class CtmAlg:
             self.C = symm(norm(self.new_C(U)))
             self.T = symm(norm(self.new_T(U)))
 
-            # Save singular values of C and magnetization
+            # Save sum of singular values
             self.sv_sums.append(np.sum(s))
-            self.magnetizations.append(self.m())
-            self.partition_functions.append(self.Z())
 
             if abs(self.sv_sums[-1] - self.sv_sums[-2]) < tol:
                 # Save the computational time
@@ -179,81 +177,3 @@ class CtmAlg:
 
         # Reshape U back in a three legged tensor and transpose. Normalize the singular values.
         return np.reshape(U, (k, self.d, self.chi)).T, norm(s)
-
-    def Z(self) -> float:
-        """
-        Return the value for the partition function of the system.
-        """
-        return float(
-            ncon(
-                [
-                    self.C,
-                    self.T,
-                    self.T,
-                    self.C,
-                    self.a,
-                    self.C,
-                    self.T,
-                    self.T,
-                    self.C,
-                ],
-                (
-                    [1, 2],
-                    [1, 4, 3],
-                    [2, 8, 7],
-                    [4, 5],
-                    [3, 6, 7, 9],
-                    [8, 12],
-                    [5, 10, 6],
-                    [11, 12, 9],
-                    [10, 11],
-                ),
-            )
-        )
-
-    def m(self) -> float:
-        """
-        Return the value for the magnetization of the system.
-        """
-        return float(
-            ncon(
-                [
-                    self.C,
-                    self.T,
-                    self.T,
-                    self.C,
-                    self.b,
-                    self.C,
-                    self.T,
-                    self.T,
-                    self.C,
-                ],
-                (
-                    [1, 2],
-                    [1, 4, 3],
-                    [2, 8, 7],
-                    [4, 5],
-                    [3, 6, 7, 9],
-                    [8, 12],
-                    [5, 10, 6],
-                    [11, 12, 9],
-                    [10, 11],
-                ),
-            )
-            / self.Z()
-        )
-
-    def f(self) -> float:
-        """
-        Return the free energy of the system.
-        """
-        corners = ncon(
-            [self.C, self.C, self.C, self.C], ([1, 2], [1, 3], [3, 4], [4, 2])
-        )
-        denom = (
-            ncon(
-                [self.C, self.C, self.T, self.T, self.C, self.C],
-                ([1, 2], [1, 3], [2, 5, 4], [3, 6, 4], [5, 7], [6, 7]),
-            )
-        ) ** 2
-        return float(-(1 / self.beta) * np.log(self.Z() * corners / denom))

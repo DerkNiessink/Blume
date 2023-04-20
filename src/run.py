@@ -25,14 +25,13 @@ def sweep_T(
     iteration is used as initial tensors, else the initial tensors are random.
 
     Returns a list containing physical properties in the following order:
-    [chi, tolerance, computional time, temperatures, partition functions,
-    magnetizations, free energies, converged corner, converged edge].
+    [chi, tolerance, computional time, temperatures, converged corner, converged edge].
     """
     data = []
     C_init, T_init = None, None
 
     for beta in tqdm(
-        np.arange(1 / T_range[1], 1 / T_range[0], step), desc=f"Chi = {chi}"
+        np.arange(1 / T_range[1], 1 / T_range[0], step)[::-1], desc=f"Chi = {chi}"
     ):
         alg = CtmAlg(beta, chi=chi, C_init=C_init, T_init=T_init)
         alg.exe(tol, max_steps)
@@ -40,12 +39,22 @@ def sweep_T(
         if use_prev:
             C_init, T_init = alg.C, alg.T
 
-        # Save temperature, partition function, magnetization and free energy
-        data.append(
-            (alg.exe_time, 1 / beta, alg.Z(), abs(alg.m()), alg.f(), alg.C, alg.T)
-        )
+        # Save execution time, temperature and the converged corner and edge and
+        # the a and b tensors.
+        data.append((alg.exe_time, 1 / beta, alg.C, alg.T, alg.a, alg.b))
 
     return [chi, tol] + list(zip(*data))
+
+
+class NumpyEncoder(json.JSONEncoder):
+    """
+    Class for encoding a np.ndarray to JSON
+    """
+
+    def default(self, obj):
+        if isinstance(obj, np.ndarray):
+            return obj.tolist()
+        return json.JSONEncoder.default(self, obj)
 
 
 def save(data: list, dir: str):
@@ -54,9 +63,10 @@ def save(data: list, dir: str):
     folder.
 
     `data` (list): Should be of the following form:
-    [chi, tolerance, execution times, temperatures, partition functions,
-    magnetizations, free energies, converged corner, converged edge].
+    [chi, tolerance, execution times, converged corner, converged edge, a tensor,
+     b tensor].
     """
+    print(f"Saving data in for chi = {data[0]} in folder: '{dir}'")
     with open(f"data/{dir}/chi{data[0]}.json", "w") as fp:
         json.dump(
             {
@@ -64,14 +74,15 @@ def save(data: list, dir: str):
                 "tolerance": data[1],
                 "execution times": data[2],
                 "temperatures": data[3],
-                "partition functions": data[4],
-                "magnetizations": data[5],
-                "free energies": data[6],
-                "converged corner": f"{data[7]}",
-                "converged edge": f"{data[8]}",
+                "converged corners": data[4],
+                "converged edges": data[5],
+                "a tensors": data[6],
+                "b tensors": data[7],
             },
             fp,
+            cls=NumpyEncoder,
         )
+    print("Done \n")
 
 
 def new_folder():
@@ -94,8 +105,8 @@ if __name__ == "__main__":
             chi,
             T_range=(2.25, 2.29),
             step=0.0001,
-            tol=1e-7,
+            tol=1e-9,
             max_steps=int(10e8),
-            use_prev=False,
+            use_prev=True,
         )
         save(data, dir)

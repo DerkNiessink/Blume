@@ -1,5 +1,6 @@
 from src.CTM_alg import CtmAlg
 from src.tensors import Tensors
+from src.post_props import Props
 
 import unittest
 import numpy as np
@@ -103,12 +104,13 @@ class TestCtmAlg(unittest.TestCase):
         """
         Test that the algorithm gives a known value for the magnetization.
         """
+        beta = 0.5
         m_known = 0.911319  # known magnetization for beta = 0.5.
-        alg = CtmAlg(beta=0.5, chi=8)
+        alg = CtmAlg(beta=beta, chi=8)
         alg.exe(tol=1e-7)
         self.assertAlmostEqual(
             m_known,
-            abs(alg.m()),
+            Props.m(alg.C, alg.T, beta, alg.a, alg.b),
             places=6,
             msg="The known m for beta = 0.5, does not equal the m obtained"
             " from the algorithm",
