@@ -11,7 +11,7 @@ class Tensors:
 
     beta: float = 0.5
     d: int = 2
-    Q: np.array = field(init=False)
+    Q: np.ndarray = field(init=False)
 
     def __post_init__(self):
         self.Q = sqrtm(
@@ -24,7 +24,7 @@ class Tensors:
         )
 
     @staticmethod
-    def delta(shape: tuple[int]) -> np.array:
+    def delta(shape: tuple[int]) -> np.ndarray:
         """
         Returns a kronecker delta matrix of specific shape. The length of all
         dimensions of the shape has to be equal.
@@ -40,7 +40,7 @@ class Tensors:
         return A
 
     @staticmethod
-    def random(shape: tuple) -> np.array:
+    def random(shape: tuple) -> np.ndarray:
         """
         Returns a random tensor of specific shape, which can be either rank 2
         or rank 3. The tensor is symmetric under the exchange of the first two
@@ -49,7 +49,7 @@ class Tensors:
         c = np.random.uniform(size=shape)
         return Methods.symmetrize(c)
 
-    def a(self) -> np.array:
+    def a(self) -> np.ndarray:
         """
         Returns the tensor representation of a single lattice site in the
         partition function.
@@ -60,7 +60,7 @@ class Tensors:
             ([-1, 1], [-2, 2], [-3, 3], [-4, 4], [1, 2, 3, 4]),
         )
 
-    def b(self) -> np.array:
+    def b(self) -> np.ndarray:
         """
         Returns the tensor representation for a single lattice site in the
         numerator of the magnetization (partition function = denominator).
@@ -72,7 +72,7 @@ class Tensors:
             ([-1, 1], [-2, 2], [-3, 3], [-4, 4], [1, 2, 3, 4]),
         )
 
-    def C_init(self) -> np.array:
+    def C_init(self) -> np.ndarray:
         """
         Returns the initial corner tensor for a system with boundary conditions.
         """
@@ -80,7 +80,7 @@ class Tensors:
             [self.Q, self.delta((self.d, self.d)), self.Q], ([1, -1], [1, 2], [-2, 2])
         )
 
-    def T_init(self) -> np.array:
+    def T_init(self) -> np.ndarray:
         """
         Returns the initial edge tensor for a system with boundary conditions.
         """
@@ -95,7 +95,7 @@ class Methods:
     """This class contains methods for np.arrays, required for the CTM algorithm."""
 
     @staticmethod
-    def symmetrize(M: np.array) -> np.array:
+    def symmetrize(M: np.ndarray) -> np.ndarray:
         """
         Symmetrize the array about the first two axes. Only works for 2 or 3
         dimensional arrays.
@@ -107,7 +107,7 @@ class Methods:
         return (M + np.transpose(M, axes)) / 2
 
     @staticmethod
-    def normalize(M: np.array) -> np.array:
+    def normalize(M: np.ndarray) -> np.ndarray:
         """
         Divide all elements in the given array by its largest value.
         """

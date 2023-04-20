@@ -2,6 +2,7 @@ import numpy as np
 import scipy.sparse.linalg
 import scipy.linalg
 from ncon import ncon
+import time
 
 try:
     from src.tensors import Tensors, Methods
@@ -16,32 +17,63 @@ class CtmAlg:
     """
     Class for the Corner Transfer Matrix (CTM) algorithm for evualuating the
     partition function and other physical properties of the Ising model.
+
+    `beta` (float): Equivalent to the inverse of the temperature.
+    `boundary_conditions` (bool): If true the edge and corner tensors are
+    initialized with the boundary condition (bc) tensors, else random.
+    `chi` (int): bond dimension of the edge and corner tensors.
+    `C_init` (np.array) and `T_init` (np.array): Optional initial corner and
+    edge tensor respectively of shapes (chi, chi) and (chi, chi, d). If boundary
+    conditions is true, the tensors are overwritten by the initial bc tensors.
+    If only one of the two is given, the other will be random initialized.
+    `n_states` (int): number of possible spin (energy) states (= 2 for Ising
+    model).
     """
 
-    def __init__(self, beta: float, boundary_conditions=False, chi=2, n_states=2):
+    def __init__(
+        self,
+        beta: float,
+        boundary_conditions=False,
+        chi=2,
+        C_init=None,
+        T_init=None,
+        n_states=2,
+    ):
         self.tensors = Tensors(beta)
         self.beta = beta
         self.b_c = boundary_conditions
         self.chi = chi
         self.d = n_states
+        self.C_init = C_init
+        self.T_init = T_init
         self.C, self.T = self.init_tensors()
         self.a = self.tensors.a()
         self.b = self.tensors.b()
         self.sv_sums = [0]
         self.magnetizations = []
         self.partition_functions = []
+        self.exe_time = None
 
-    def init_tensors(self) -> tuple[np.array, np.array]:
+    def init_tensors(self) -> tuple[np.ndarray, np.ndarray]:
         """
         Returns a tuple of the corner and edge tensor. The tensors are random
-        or initialized, depending on the boundary_conditions state
+        or initialized, depending on the boundary_conditions state and the given
+        `C_init` and `T_init`.
         """
         if self.b_c:
             return self.tensors.C_init(), self.tensors.T_init()
-        else:
-            return self.tensors.random((self.chi, self.chi)), self.tensors.random(
-                (self.chi, self.chi, self.d)
-            )
+
+        C = (  # Initialize random, if no `C_init` is given.
+            self.tensors.random((self.chi, self.chi))
+            if self.C_init is None
+            else self.C_init
+        )
+        T = (  # Initialize random, if no `T_init` is given.
+            self.tensors.random((self.chi, self.chi, self.d))
+            if self.T_init is None
+            else self.T_init
+        )
+        return C, T
 
     def exe(self, tol=1e-3, max_steps=10000):
         """
@@ -52,8 +84,9 @@ class CtmAlg:
 
         `tol` (float): convergence criterion.
         `max_steps` (int): maximum number of steps before terminating the
-        algorithm when convergered has not yet been reached.
+        algorithm when convergence has not yet been reached.
         """
+        start = time.time()
         for _ in range(max_steps):
             # Compute the new contraction `M` of the corner by inserting an `a` tensor.
             M = self.new_M()
@@ -71,9 +104,11 @@ class CtmAlg:
             self.partition_functions.append(self.Z())
 
             if abs(self.sv_sums[-1] - self.sv_sums[-2]) < tol:
+                # Save the computational time
+                self.exe_time = time.time() - start
                 break
 
-    def new_C(self, U: np.array) -> np.array:
+    def new_C(self, U: np.ndarray) -> np.ndarray:
         """
         Insert an `a` tensor and evaluate a corner matrix `new_M` by contracting
         the new corner. Renormalized the new corner with the given `U` matrix.
@@ -87,24 +122,26 @@ class CtmAlg:
             ([-1, 2, 1], [1, 2, 3, 4], [-2, 4, 3]),
         )
 
-    def new_M(self) -> np.array:
+    def new_M(self) -> np.ndarray:
         """
         evaluate the `M`, i.e. the new contracted corner with the inserted `a`
         tensor.
 
-        Returns am array of the contracted corner of shape (chi, d, chi, d).
+        Returns a array of the contracted corner of shape (chi, d, chi, d).
         """
         return ncon(
             [self.C, self.T, self.T, self.a],
             ([1, 2], [-1, 1, 3], [2, -3, 4], [-2, 3, 4, -4]),
         )
 
-    def new_T(self, U: np.array) -> np.array:
+    def new_T(self, U: np.ndarray) -> np.ndarray:
         """
         Insert an `a` tensor and evaluate a new edge tensor. Renormalize
         the edge tensor by contracting with the given truncated `U` tensor.
 
         `U` (np.array): The renormalization tensor of shape (chi, d, chi).
+
+        Returns an array of the new edge tensor of shape (chi, chi, d).
         """
         M = ncon([self.T, self.a], ([-1, -2, 1], [1, -3, -4, -5]))
         return ncon(
@@ -112,7 +149,7 @@ class CtmAlg:
             ([-1, 3, 1], [1, 2, 3, 4, -3], [-2, 4, 2]),
         )
 
-    def new_U(self, M: np.array, trunc=True) -> tuple[np.array, np.array]:
+    def new_U(self, M: np.ndarray, trunc=True) -> tuple[np.ndarray, np.ndarray]:
         """
         Return a tuple of the truncated `U` tensor and `s` matrix, by conducting a
         singular value decomposition (svd) on the given corner tensor `M`. Using
