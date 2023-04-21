@@ -15,6 +15,7 @@ class TestTensors(unittest.TestCase):
         shapes = [(2, 2), (4, 4), (2, 2, 2), (3, 3, 3), (2, 2, 2, 2)]
         for shape in shapes:
             delta = Tensors.delta(shape)
+            adj_delta = Tensors.delta(shape, adj=True)
             for index in np.ndindex(shape):
                 with self.subTest():
                     # If all indices are the same.
@@ -22,6 +23,17 @@ class TestTensors(unittest.TestCase):
                         self.assertEqual(delta[index], 1, f"delta({index}) should be 1")
                     else:
                         self.assertEqual(delta[index], 0, f"delta({index}) should be 0")
+
+                with self.subTest():
+                    # If all indices are 0.
+                    if index.count(0) == len(index):
+                        self.assertEqual(
+                            adj_delta[index], 1, f"adj_delta({index}) should be 1"
+                        )
+                    else:
+                        self.assertEqual(
+                            adj_delta[index], 0, f"adj_delta({index}) should be 0"
+                        )
 
     def test_random(self):
         """

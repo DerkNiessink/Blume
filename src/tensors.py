@@ -24,18 +24,24 @@ class Tensors:
         )
 
     @staticmethod
-    def delta(shape: tuple[int]) -> np.ndarray:
+    def delta(shape: tuple[int], adj=False) -> np.ndarray:
         """
         Returns a kronecker delta matrix of specific shape. The length of all
         dimensions of the shape has to be equal.
+
+        `shape` (tuple): desired shape of the kronecker delta matrix.
+        `adj` (bool): If true, an adjusted delta matrix is returned, which
+        only yields 1 if all indices are 0.
         """
         if shape.count(shape[0]) != len(shape):
             raise Exception("The length of all dimensions has to be equal.")
 
         A = np.zeros(shape)
         for index in np.ndindex(shape):
-            # If all indices are the same, change value to 1.
-            if index.count(index[0]) == len(index):
+            # If all indices are the same change value to 1, or if adj=True only
+            # if all indices are 0.
+            k = 0 if adj else index[0]
+            if index.count(k) == len(index):
                 A[index] = 1
         return A
 
@@ -72,20 +78,27 @@ class Tensors:
             ([-1, 1], [-2, 2], [-3, 3], [-4, 4], [1, 2, 3, 4]),
         )
 
-    def C_init(self) -> np.ndarray:
+    def C_init(self, adj=False) -> np.ndarray:
         """
         Returns the initial corner tensor for a system with boundary conditions.
+
+        `adj` (bool): If true the adjusted delta will be used for the lattice
+        site, which fixes the corner spin to one direction.
         """
         return ncon(
-            [self.Q, self.delta((self.d, self.d)), self.Q], ([1, -1], [1, 2], [-2, 2])
+            [self.Q, self.delta((self.d, self.d), adj), self.Q],
+            ([1, -1], [1, 2], [-2, 2]),
         )
 
-    def T_init(self) -> np.ndarray:
+    def T_init(self, adj=False) -> np.ndarray:
         """
         Returns the initial edge tensor for a system with boundary conditions.
+
+        `adj` (bool): If true the adjusted delta will be used for the lattice
+        site, which fixes the edge spin to one direction.
         """
         return ncon(
-            [self.Q, self.Q, self.Q, self.delta((self.d, self.d, self.d))],
+            [self.Q, self.Q, self.Q, self.delta((self.d, self.d, self.d), adj)],
             ([-1, 1], [-2, 2], [-3, 3], [1, 2, 3]),
         )
 

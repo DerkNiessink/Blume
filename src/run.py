@@ -8,32 +8,40 @@ from datetime import datetime
 
 
 def sweep_T(
-    chi: int, T_range: tuple, step: float, tol: float, max_steps: int, use_prev=True
+    T_range: tuple,
+    step: float,
+    tol=1e-7,
+    chi=2,
+    max_steps=10e8,
+    use_prev=False,
+    b_c=False,
 ) -> tuple:
-    """Sweep beta for the given range and stepsize and execute the CTM algorithm.
-    Use for every execution the corner and edge tensor of the previous step for
-    less computational cost. Return data containing physical properties extracted
-    from the converged system.
+    """
+    Sweep temperature for the given range and stepsize and execute the CTM algorithm.
+    Return data containing the algorithm paramaters and properties extracted during
+    the algorithm.
 
-    `chi` (int): Bond dimension.
     `T_range` (tuple): Temperature range to sweep.
     `step` (float): Stepsize of the varying temperature.
     `tol` (float): Convergence criterion.
+    `chi` (int): Bond dimension.
     `max_steps` (int): Maximum number of steps before terminating the
     algorithm when convergence has not yet been reached.
     `use_prev` (bool): If true, the converged corner and edge from the previous
     iteration is used as initial tensors, else the initial tensors are random.
+    `b_c` (bool): Set a fixed boundary conditions on the system if True.
 
     Returns a list containing physical properties in the following order:
-    [chi, tolerance, computional time, temperatures, converged corner, converged edge].
+    [chi, tol, max_steps, b_c, computional time, temperatures, converged corner,
+     converged edge, a tensor, b tensor].
     """
     data = []
     C_init, T_init = None, None
 
-    for beta in tqdm(
-        np.arange(1 / T_range[1], 1 / T_range[0], step)[::-1], desc=f"Chi = {chi}"
-    ):
-        alg = CtmAlg(beta, chi=chi, C_init=C_init, T_init=T_init)
+    desc = f"L = {max_steps}" if b_c else f"chi = {chi}"
+
+    for beta in tqdm(np.arange(1 / T_range[1], 1 / T_range[0], step)[::-1], desc=desc):
+        alg = CtmAlg(beta, chi=chi, C_init=C_init, T_init=T_init, b_c=b_c)
         alg.exe(tol, max_steps)
 
         if use_prev:
@@ -43,7 +51,7 @@ def sweep_T(
         # the a and b tensors.
         data.append((alg.exe_time, 1 / beta, alg.C, alg.T, alg.a, alg.b))
 
-    return [chi, tol] + list(zip(*data))
+    return [chi, tol, max_steps, b_c] + list(zip(*data))
 
 
 class NumpyEncoder(json.JSONEncoder):
@@ -63,21 +71,26 @@ def save(data: list, dir: str):
     folder.
 
     `data` (list): Should be of the following form:
-    [chi, tolerance, execution times, converged corner, converged edge, a tensor,
-     b tensor].
+    [chi, tolerance, max number of steps, boundary conditions, execution times,
+    converged corner, converged edge, a tensor, b tensor].
     """
-    print(f"Saving data in for chi = {data[0]} in folder: '{dir}'")
-    with open(f"data/{dir}/chi{data[0]}.json", "w") as fp:
+    print(f"Saving data in folder: '{dir}'")
+    # Name the file L{max_steps} if b_c else chi{chi}
+    fn = f"L{data[2]}" if data[3] else f"chi{data[0]}"
+
+    with open(f"data/{dir}/{fn}.json", "w") as fp:
         json.dump(
             {
                 "chi": data[0],
                 "tolerance": data[1],
-                "execution times": data[2],
-                "temperatures": data[3],
-                "converged corners": data[4],
-                "converged edges": data[5],
-                "a tensors": data[6],
-                "b tensors": data[7],
+                "max number of steps": data[2],
+                "boundary conditions": data[3],
+                "execution times": data[4],
+                "temperatures": data[5],
+                "converged corners": data[6],
+                "converged edges": data[7],
+                "a tensors": data[8],
+                "b tensors": data[9],
             },
             fp,
             cls=NumpyEncoder,
@@ -100,13 +113,25 @@ def new_folder():
 
 if __name__ == "__main__":
     dir = new_folder()
+
     for chi in [4, 8, 12]:
         data = sweep_T(
-            chi,
+            chi=chi,
             T_range=(2.25, 2.29),
             step=0.0001,
-            tol=1e-9,
+            tol=1e-7,
             max_steps=int(10e8),
             use_prev=True,
         )
         save(data, dir)
+
+    """
+    for L in [10000]:
+        data = sweep_T(
+            T_range=(1, 4),
+            step=0.001,
+            max_steps=L,
+            b_c=True,
+        )
+        save(data, dir)
+    """

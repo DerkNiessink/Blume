@@ -19,8 +19,8 @@ class CtmAlg:
     partition function and other physical properties of the Ising model.
 
     `beta` (float): Equivalent to the inverse of the temperature.
-    `boundary_conditions` (bool): If true the edge and corner tensors are
-    initialized with the boundary condition (bc) tensors, else random.
+    `b_c` (bool): If true the edge and corner tensors are initialized with the
+    boundary condition (bc) tensors, else random.
     `chi` (int): bond dimension of the edge and corner tensors.
     `C_init` (np.array) and `T_init` (np.array): Optional initial corner and
     edge tensor respectively of shapes (chi, chi) and (chi, chi, d). If boundary
@@ -33,7 +33,7 @@ class CtmAlg:
     def __init__(
         self,
         beta: float,
-        boundary_conditions=False,
+        b_c=False,
         chi=2,
         C_init=None,
         T_init=None,
@@ -41,7 +41,7 @@ class CtmAlg:
     ):
         self.tensors = Tensors(beta)
         self.beta = beta
-        self.b_c = boundary_conditions
+        self.b_c = b_c
         self.chi = chi
         self.d = n_states
         self.C_init = C_init

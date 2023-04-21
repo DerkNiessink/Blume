@@ -1,5 +1,3 @@
-from dataclasses import dataclass
-
 import numpy as np
 from ncon import ncon
 
@@ -82,16 +80,15 @@ class Props:
         )
         denom = ncon(
             [a_corner, a_corner, C, T, T, C],
-            ([1, 2, 3, 4], [1, 2, 5, 6], [3, 7], [7, 8, 4], [8, 9, 5], [9, 6]),
+            ([1, 2, 3, 4], [1, 2, 5, 6], [3, 7], [7, 8, 4], [8, 9, 6], [9, 5]),
         )
         b_corner = ncon(
             [C, T, T, b],
             ([1, 2], [-1, 1, 3], [2, -3, 4], [-2, 3, 4, -4]),
         )
         num = ncon(
-            ncon(
-                [b_corner, b_corner, C, T, T, C],
-                ([1, 2, 3, 4], [1, 2, 5, 6], [3, 7], [7, 8, 4], [8, 9, 5], [9, 6]),
-            )
+            [b_corner, b_corner, C, T, T, C],
+            ([1, 2, 3, 4], [1, 2, 5, 6], [3, 7], [7, 8, 4], [8, 9, 6], [9, 5]),
         )
+
         return -float(num / denom) * 2

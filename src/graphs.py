@@ -13,7 +13,7 @@ plt.style.use("science")
 plt.rcParams["text.usetex"] = True
 
 
-def plot_chi(chi: int, range: tuple, prop: types.FunctionType | str, folder: str):
+def plot_file(param: int, range: tuple, prop: types.FunctionType | str, folder: str):
     """
     Plot a given variable against temperature.
 
@@ -23,7 +23,7 @@ def plot_chi(chi: int, range: tuple, prop: types.FunctionType | str, folder: str
     the name of the property.
     `folder` (str): Folder that contains the data of the specific chi.
     """
-    data = read(folder, chi)
+    data = read(folder, param)
 
     temps = data["temperatures"]
     C_tensors = np.asarray(data["converged corners"])
@@ -38,29 +38,29 @@ def plot_chi(chi: int, range: tuple, prop: types.FunctionType | str, folder: str
         if type(prop) == str
         else compute(prop, temps, C_tensors, T_tensors, a_tensors, b_tensors)
     )
-
     # Find the indices closest to the range values.
     lower_value = min(temps, key=lambda x: abs(x - range[1]))
     upper_value = min(temps, key=lambda x: abs(x - range[0]))
     lower_index = temps.index(lower_value)
     upper_index = temps.index(upper_value)
 
-    plt.plot(
-        temps[upper_index:lower_index],
-        y[upper_index:lower_index],
-        label=f"$\chi={chi}$",
-    )
+    label = f"$L={param}$" if data["boundary conditions"] else f"$\chi={param}$"
+    plt.plot(temps[upper_index:lower_index], y[upper_index:lower_index], label=label)
 
 
-def read(folder: str, chi: int) -> dict:
+def read(folder: str, val: int) -> dict:
     """
     Read the data in a specific folder, for a specific chi.
 
     folder (str): name of the folder that contains the data.
-    chi (int): chi corresponding to the desired file to read.
+    val (int): chi or L value corresponding to the desired file to read.
     """
-    filename = os.path.join("data", folder, "chi" + f"{chi}.json")
-    with open(filename, "r") as f:
+    try:
+        f = open(f"data/{folder}/chi{val}.json", "r")
+    except FileNotFoundError:
+        f = open(f"data/{folder}/L{val}.json", "r")
+
+    with f:
         return json.loads(f.read())
 
 
@@ -101,19 +101,21 @@ def exact_m(range: tuple[float], step=0.0001) -> list:
 if __name__ == "__main__":
     folder = sys.argv[1]
     path_dir = f"data/{folder}/plots"
-    chi_list = sys.argv[2:]
+    params = sys.argv[2:]
 
     if not os.path.isdir(path_dir):
         os.mkdir(path_dir)
 
+    T_c = 2 / np.log(1 + np.sqrt(2))
+
     """
-    PLOT MAGNETIZATIONS
+    MAGNETIZATIONS
     """
     plt.figure(figsize=(7, 5))
     T_range = (2.25, 2.29)
-    for chi in chi_list:
-        plot_chi(chi, range=T_range, prop=Props.m, folder=folder)
-
+    # plt.axvline(T_c, color="k", linestyle="dashed", label=r"$T_c$")
+    for param in params:
+        plot_file(param, range=T_range, prop=Props.m, folder=folder)
     T, m = exact_m(T_range)
     plt.plot(T, m, "k-", label="exact")
     plt.legend()
@@ -123,29 +125,42 @@ if __name__ == "__main__":
     plt.savefig(f"{path_dir}/magnetizations")
 
     """
-    PLOT FREE ENERGIES
+    FREE ENERGY
     """
     plt.figure(figsize=(7, 5))
     T_range = (1, 4)
-    for chi in chi_list:
-        plot_chi(chi, range=T_range, prop=Props.f, folder=folder)
+    plt.axvline(T_c, color="k", linestyle="dashed", label=r"$T_c$")
+    for param in params:
+        plot_file(param, range=T_range, prop=Props.f, folder=folder)
 
     plt.legend()
     plt.xlabel(r"$T$", fontsize=15)
     plt.ylabel(r"f", fontsize=15)
-    plt.ylim(-2.12)
     plt.savefig(f"{path_dir}/free energies")
 
     """ 
     PLOT EXECUTION TIMES 
     """
     plt.figure(figsize=(7, 5))
-    T_range = (2, 2.3)
-    for chi in chi_list:
-        plot_chi(chi, range=T_range, prop="execution times", folder=folder)
+    T_range = (1, 4)
+    plt.axvline(T_c, color="k", linestyle="dashed", label=r"$T_c$")
+    for param in params:
+        plot_file(param, range=T_range, prop="execution times", folder=folder)
 
     plt.legend()
     plt.xlabel(r"$T$", fontsize=15)
     plt.ylabel(r"t", fontsize=15)
-    plt.ylim(0)
     plt.savefig(f"{path_dir}/execution times")
+
+    """ 
+    ENERGY PER SITE
+    """
+    plt.figure(figsize=(7, 5))
+    plt.axvline(T_c, color="k", linestyle="dashed", label=r"$T_c$")
+    T_range = (2, 2.3)
+    for param in params:
+        plot_file(param, range=T_range, prop=Props.Es, folder=folder)
+    plt.legend()
+    plt.xlabel(r"$T$", fontsize=15)
+    plt.ylabel(r"$E_s$", fontsize=15)
+    plt.savefig(f"{path_dir}/energies per site")

@@ -133,7 +133,7 @@ class TestCtmAlg(unittest.TestCase):
         )
         two_corners = ncon([corner, corner], ([-1, -2, 1, 2], [-3, -4, 1, 2]))
 
-        alg = CtmAlg(beta=0.5, boundary_conditions=True)
+        alg = CtmAlg(beta=0.5, b_c=True)
         M = alg.new_M()
         untrunc_U, _ = alg.new_U(M, trunc=False)
 
