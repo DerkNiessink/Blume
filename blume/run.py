@@ -18,6 +18,7 @@ def sweep_T(
     max_steps=int(10e8),
     use_prev=False,
     b_c=False,
+    bar=True,
 ) -> tuple:
     """
     Sweep temperature for the given range and stepsize and execute the CTM algorithm.
@@ -33,6 +34,7 @@ def sweep_T(
     `use_prev` (bool): If true, the converged corner and edge from the previous
     iteration is used as initial tensors, else the initial tensors are random.
     `b_c` (bool): Set a fixed boundary conditions on the system if True.
+    `bar` (bool): If true, a progress bar is displayed.
 
     Returns a list containing physical properties in the following order:
     [chi, tol, max_steps, b_c, computional time, temperatures, converged corner,
@@ -43,7 +45,11 @@ def sweep_T(
 
     desc = f"L = {max_steps}" if b_c else f"chi = {chi}"
 
-    for beta in tqdm(np.arange(1 / T_range[1], 1 / T_range[0], step)[::-1], desc=desc):
+    for beta in tqdm(
+        np.arange(1 / T_range[1], 1 / T_range[0], step)[::-1],
+        desc=desc,
+        disable=not (bar),
+    ):
         alg = CtmAlg(beta, chi=chi, C_init=C_init, T_init=T_init, b_c=b_c)
         alg.exe(tol, max_steps)
 
@@ -68,7 +74,7 @@ class NumpyEncoder(json.JSONEncoder):
         return json.JSONEncoder.default(self, obj)
 
 
-def save(data: list, dir: str):
+def save(data: list, dir: str, msg=True):
     """
     Save the data containing physical properties for varying beta in the `data`
     folder.
@@ -77,10 +83,11 @@ def save(data: list, dir: str):
     [chi, tolerance, max number of steps, boundary conditions, execution times,
     converged corner, converged edge, a tensor, b tensor].
     `dir` (str): Directory where the data is saved.
-
-    Returns a string of the filename.
+    `msg` (bool): If true, print a message at the start and end of saving.
     """
-    print(f"Saving data in folder: '{dir}'")
+    if msg:
+        print(f"Saving data in folder: '{dir}'")
+
     # Name the file L{max_steps} if b_c else chi{chi}
     fn = f"L{data[2]}" if data[3] else f"chi{data[0]}"
 
@@ -101,8 +108,9 @@ def save(data: list, dir: str):
             fp,
             cls=NumpyEncoder,
         )
-    print("Done \n")
-    return fn
+
+    if msg:
+        print("Done \n")
 
 
 def new_folder():
