@@ -128,13 +128,14 @@ def new_folder():
 
 if __name__ == "__main__":
     dir = new_folder()
+    T_c = 2 / np.log(1 + np.sqrt(2))
 
-    for chi in [8]:
+    for chi in range(2, 20):
         data = sweep_T(
             chi=chi,
-            T_range=(2.25, 2.29),
-            step=0.0001,
-            tol=1e-7,
+            T_range=(T_c, T_c + 0.01),
+            step=0.01,
+            tol=1e-9,
             max_steps=int(10e8),
             use_prev=False,
         )

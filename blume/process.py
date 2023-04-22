@@ -6,7 +6,7 @@ import numpy as np
 import sys
 import types
 
-from blume.model.post_props import Props
+from model.post_props import Props
 
 
 plt.style.use("science")
