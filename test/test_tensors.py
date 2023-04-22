@@ -1,4 +1,4 @@
-from src.tensors import Tensors
+from blume.model.tensors import Tensors
 
 import unittest
 import numpy as np

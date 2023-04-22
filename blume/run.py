@@ -1,4 +1,7 @@
-from CTM_alg import CtmAlg
+try:
+    from model.CTM_alg import CtmAlg
+except:
+    from blume.model.CTM_alg import CtmAlg
 
 import numpy as np
 import json
@@ -12,7 +15,7 @@ def sweep_T(
     step: float,
     tol=1e-7,
     chi=2,
-    max_steps=10e8,
+    max_steps=int(10e8),
     use_prev=False,
     b_c=False,
 ) -> tuple:
@@ -73,6 +76,9 @@ def save(data: list, dir: str):
     `data` (list): Should be of the following form:
     [chi, tolerance, max number of steps, boundary conditions, execution times,
     converged corner, converged edge, a tensor, b tensor].
+    `dir` (str): Directory where the data is saved.
+
+    Returns a string of the filename.
     """
     print(f"Saving data in folder: '{dir}'")
     # Name the file L{max_steps} if b_c else chi{chi}
@@ -96,6 +102,7 @@ def save(data: list, dir: str):
             cls=NumpyEncoder,
         )
     print("Done \n")
+    return fn
 
 
 def new_folder():
@@ -114,14 +121,14 @@ def new_folder():
 if __name__ == "__main__":
     dir = new_folder()
 
-    for chi in [4, 8, 12]:
+    for chi in [8]:
         data = sweep_T(
             chi=chi,
             T_range=(2.25, 2.29),
             step=0.0001,
             tol=1e-7,
             max_steps=int(10e8),
-            use_prev=True,
+            use_prev=False,
         )
         save(data, dir)
 

@@ -5,9 +5,9 @@ from ncon import ncon
 import time
 
 try:
-    from src.tensors import Tensors, Methods
+    from model.tensors import Tensors, Methods
 except:
-    from tensors import Tensors, Methods
+    from blume.model.tensors import Tensors, Methods
 
 norm = Methods.normalize
 symm = Methods.symmetrize

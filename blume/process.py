@@ -6,7 +6,7 @@ import numpy as np
 import sys
 import types
 
-from post_props import Props
+from blume.model.post_props import Props
 
 
 plt.style.use("science")
@@ -50,7 +50,7 @@ def plot_file(param: int, range: tuple, prop: types.FunctionType | str, folder: 
 
 def read(folder: str, val: int) -> dict:
     """
-    Read the data in a specific folder, for a specific chi.
+    Read the data in a specific folder for a specific chi or L.
 
     folder (str): name of the folder that contains the data.
     val (int): chi or L value corresponding to the desired file to read.

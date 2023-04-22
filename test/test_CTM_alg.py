@@ -1,6 +1,6 @@
-from src.CTM_alg import CtmAlg
-from src.tensors import Tensors
-from src.post_props import Props
+from blume.model.CTM_alg import CtmAlg
+from blume.model.tensors import Tensors
+from blume.model.post_props import Props
 
 import unittest
 import numpy as np
