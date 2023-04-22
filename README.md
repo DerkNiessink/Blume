@@ -1,4 +1,4 @@
-# Blume_Capel_CTM
+# Blume
 
 ## Results
 
