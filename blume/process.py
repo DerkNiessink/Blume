@@ -28,19 +28,11 @@ def plot_file(param: int, range: tuple, prop: types.FunctionType | str, folder: 
     """
     data = read(folder, param)
 
-    temps = data["temperatures"]
-    C_tensors = np.asarray(data["converged corners"])
-    T_tensors = np.asarray(data["converged edges"])
-    a_tensors = np.asarray(data["a tensors"])
-    b_tensors = np.asarray(data["b tensors"])
-
     # If string is given, the propery already exists in the data, else compute
     # the property with the function.
-    y = (
-        data[prop]
-        if type(prop) == str
-        else compute(prop, temps, C_tensors, T_tensors, a_tensors, b_tensors)
-    )
+    y = data[prop] if type(prop) == str else compute(prop, data)
+
+    temps = data["temperatures"]
     # Find the indices closest to the range values.
     lower_value = min(temps, key=lambda x: abs(x - range[1]))
     upper_value = min(temps, key=lambda x: abs(x - range[0]))
@@ -68,18 +60,23 @@ def read(folder: str, val: int) -> dict:
 
 
 def compute(
-    prop: types.FunctionType,
-    temps: list,
-    C_tensors: list[np.ndarray],
-    T_tensors: list[np.ndarray],
-    a_tensors: list[np.ndarray],
-    b_tensors: list[np.ndarray],
+    prop: Props,
+    data: dict,
 ) -> list:
     """
-    Compute the corresponding property for a given list of temperatures and
-    converged corner and edge tensors.
-    """
+    Compute the corresponding property for a given dictionary of data from the
+    algorithm.
 
+    prop (Props): Desired thermodynamic property to compute from `data`.
+    data (dict): Dictionary containing the algorithm data.
+    """
+    temps, C_tensors, T_tensors, a_tensors, b_tensors = (
+        data["temperatures"],
+        np.asarray(data["converged corners"]),
+        np.asarray(data["converged edges"]),
+        np.asarray(data["a tensors"]),
+        np.asarray(data["b tensors"]),
+    )
     return [
         prop(C, T, 1 / temp, a, b)
         for temp, C, T, a, b in zip(temps, C_tensors, T_tensors, a_tensors, b_tensors)
