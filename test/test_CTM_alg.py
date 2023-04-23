@@ -1,6 +1,6 @@
 from blume.model.CTM_alg import CtmAlg
 from blume.model.tensors import Tensors
-from blume.model.post_props import Props
+from blume.model.post_props import Prop
 
 import unittest
 import numpy as np
@@ -110,7 +110,7 @@ class TestCtmAlg(unittest.TestCase):
         alg.exe(tol=1e-7)
         self.assertAlmostEqual(
             m_known,
-            Props.m(alg.C, alg.T, beta, alg.a, alg.b),
+            Prop.m(alg.C, alg.T, beta, alg.a, alg.b),
             places=6,
             msg="The known m for beta = 0.5, does not equal the m obtained"
             " from the algorithm",
