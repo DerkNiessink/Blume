@@ -1,22 +1,14 @@
-import os
 import json
 import matplotlib.pyplot as plt
-import scienceplots
 import numpy as np
-import sys
-import types
 
 try:
-    from model.post_props import Props
+    from model.post_props import Prop
 except:
-    from blume.model.post_props import Props
+    from blume.model.post_props import Prop
 
 
-plt.style.use("science")
-plt.rcParams["text.usetex"] = True
-
-
-def plot_file(param: int, range: tuple, prop: types.FunctionType | str, folder: str):
+def plot_file(param: int, range: tuple, prop: Prop | str, folder: str):
     """
     Plot a given variable against temperature.
 
@@ -60,14 +52,14 @@ def read(folder: str, val: int) -> dict:
 
 
 def compute(
-    prop: Props,
+    prop: Prop,
     data: dict,
 ) -> list:
     """
     Compute the corresponding property for a given dictionary of data from the
     algorithm.
 
-    prop (Props): Desired thermodynamic property to compute from `data`.
+    prop (Prop): Desired thermodynamic property to compute from `data`.
     data (dict): Dictionary containing the algorithm data.
     """
     temps, C_tensors, T_tensors, a_tensors, b_tensors = (

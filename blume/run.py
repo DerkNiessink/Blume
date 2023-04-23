@@ -126,30 +126,3 @@ def new_folder():
     if not os.path.isdir(f"data/{now}"):
         os.mkdir(f"data/{now}")
     return now
-
-
-if __name__ == "__main__":
-    dir = new_folder()
-    T_c = 2 / np.log(1 + np.sqrt(2))
-
-    for chi in range(2, 20):
-        data = sweep_T(
-            chi=chi,
-            T_range=(T_c, T_c + 0.01),
-            step=0.01,
-            tol=1e-9,
-            max_steps=int(10e8),
-            use_prev=False,
-        )
-        save(data, dir)
-
-    """
-    for L in [10000]:
-        data = sweep_T(
-            T_range=(1, 4),
-            step=0.001,
-            max_steps=L,
-            b_c=True,
-        )
-        save(data, dir)
-    """
