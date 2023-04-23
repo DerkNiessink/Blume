@@ -11,8 +11,8 @@ from datetime import datetime
 
 
 def sweep_T(
-    T_range: tuple,
-    step: float,
+    T_range: tuple | list,
+    step=0.001,
     tol=1e-7,
     chi=2,
     max_steps=int(10e8),
@@ -25,7 +25,7 @@ def sweep_T(
     Return data containing the algorithm paramaters and properties extracted during
     the algorithm.
 
-    `T_range` (tuple): Temperature range to sweep.
+    `T_range` (tuple | list): Temperature range or list to sweep.
     `step` (float): Stepsize of the varying temperature.
     `tol` (float): Convergence criterion.
     `chi` (int): Bond dimension.
@@ -42,14 +42,16 @@ def sweep_T(
     """
     data = []
     C_init, T_init = None, None
-
     desc = f"L = {max_steps}" if b_c else f"chi = {chi}"
 
-    for beta in tqdm(
-        np.arange(1 / T_range[1], 1 / T_range[0], step)[::-1],
-        desc=desc,
-        disable=not (bar),
-    ):
+    # Allow a list or range tuple for `T_range`.
+    T_array = (
+        T_range
+        if isinstance(T_range, list)
+        else np.arange(1 / T_range[1], 1 / T_range[0], step)[::-1]
+    )
+
+    for beta in tqdm(T_array, desc=desc, disable=not (bar)):
         alg = CtmAlg(beta, chi=chi, C_init=C_init, T_init=T_init, b_c=b_c)
         alg.exe(tol, max_steps)
 

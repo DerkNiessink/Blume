@@ -17,7 +17,7 @@ class TestRun(unittest.TestCase):
         dir = new_folder()
 
         for chi in cls.chi_list:
-            data = sweep_T(chi=chi, T_range=(2.5, 2.6), step=0.001, bar=False)
+            data = sweep_T(chi=chi, T_range=[2.5, 2.6, 2.6], bar=False)
             save(data, dir, msg=False)
 
         for L in cls.L_list:
