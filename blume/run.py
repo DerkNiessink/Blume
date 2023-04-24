@@ -45,13 +45,12 @@ def sweep_T(
     desc = f"L = {max_steps}" if b_c else f"chi = {chi}"
 
     # Allow a list or range tuple for `T_range`.
-    T_array = (
-        T_range
-        if isinstance(T_range, list)
-        else np.arange(1 / T_range[1], 1 / T_range[0], step)[::-1]
-    )
+    if isinstance(T_range, list):
+        temps = [1 / T for T in T_range]
+    else:
+        temps = np.arange(1 / T_range[1], 1 / T_range[0], step)[::-1]
 
-    for beta in tqdm(T_array, desc=desc, disable=not (bar)):
+    for beta in tqdm(temps, desc=desc, disable=not (bar)):
         alg = CtmAlg(beta, chi=chi, C_init=C_init, T_init=T_init, b_c=b_c)
         alg.exe(tol, max_steps)
 

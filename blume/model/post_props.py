@@ -1,5 +1,7 @@
 import numpy as np
 from ncon import ncon
+import scipy.linalg
+import scipy.sparse.linalg
 
 
 class Prop:
@@ -92,3 +94,14 @@ class Prop:
         )
 
         return -float(num / denom) * 2
+
+    @staticmethod
+    def xi(C, T, beta, a, b) -> float:
+        """
+        Return the correlation length of the system.
+        """
+        M = ncon([T, T], ([-1, -3, 3], [-2, -4, 3]))
+        # Reshape to matrix
+        M = M.reshape(T.shape[0] ** 2, T.shape[0] ** 2)
+        w = scipy.linalg.eigh(M, eigvals_only=True)
+        return 1 / np.log(abs(w[-1]) / abs(w[-2]))

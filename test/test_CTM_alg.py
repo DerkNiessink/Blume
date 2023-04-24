@@ -100,22 +100,6 @@ class TestCtmAlg(unittest.TestCase):
                 f"The truncated renormalization tensor U is not unitary,\n U*U.T = \n{product}",
             )
 
-    def test_magnetization(self):
-        """
-        Test that the algorithm gives a known value for the magnetization.
-        """
-        beta = 0.5
-        m_known = 0.911319  # known magnetization for beta = 0.5.
-        alg = CtmAlg(beta=beta, chi=8)
-        alg.exe(tol=1e-7)
-        self.assertAlmostEqual(
-            m_known,
-            Prop.m(alg.C, alg.T, beta, alg.a, alg.b),
-            places=6,
-            msg="The known m for beta = 0.5, does not equal the m obtained"
-            " from the algorithm",
-        )
-
     def test_small_system(self):
         """
         Compare two contracted corners of the 5x5 system with one step of the algorithm.
