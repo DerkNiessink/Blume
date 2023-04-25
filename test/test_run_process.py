@@ -17,12 +17,17 @@ class TestRun(unittest.TestCase):
         dir = new_folder()
 
         for chi in cls.chi_list:
-            data = sweep_T(chi=chi, T_range=[2.5, 2.6, 2.6], bar=False)
+            data = sweep_T(chi=chi, T_range=[2.5, 2.6, 2.6], bar=False, which="chi")
             save(data, dir, msg=False)
 
         for L in cls.L_list:
             data = sweep_T(
-                T_range=(2.5, 2.6), step=0.001, max_steps=L, b_c=True, bar=False
+                T_range=(2.5, 2.6),
+                step=0.001,
+                max_steps=L,
+                b_c=True,
+                bar=False,
+                which="max_steps",
             )
             save(data, dir, msg=False)
 
@@ -39,7 +44,7 @@ class TestRun(unittest.TestCase):
         """
         for L in TestRun.L_list:
             with self.subTest():
-                self.assertTrue(os.path.isfile(f"data/{TestRun.now}/L{L}.json"))
+                self.assertTrue(os.path.isfile(f"data/{TestRun.now}/max_steps{L}.json"))
 
         for chi in TestRun.chi_list:
             with self.subTest():

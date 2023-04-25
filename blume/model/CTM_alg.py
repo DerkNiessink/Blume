@@ -21,6 +21,8 @@ class CtmAlg:
     `beta` (float): Equivalent to the inverse of the temperature.
     `b_c` (bool): If true the edge and corner tensors are initialized with the
     boundary condition (bc) tensors, else random.
+    `fixed` (bool): If true fix the spin on the corner to one spin. Only applies
+    for a system with boundary conditions.
     `chi` (int): bond dimension of the edge and corner tensors.
     `C_init` (np.array) and `T_init` (np.array): Optional initial corner and
     edge tensor respectively of shapes (chi, chi) and (chi, chi, d). If boundary
@@ -34,6 +36,7 @@ class CtmAlg:
         self,
         beta: float,
         b_c=False,
+        fixed=False,
         chi=2,
         C_init=None,
         T_init=None,
@@ -46,22 +49,24 @@ class CtmAlg:
         self.d = n_states
         self.C_init = C_init
         self.T_init = T_init
-        self.C, self.T = self.init_tensors()
+        self.C, self.T = self.init_tensors(fixed)
         self.a = self.tensors.a()
         self.b = self.tensors.b()
         self.sv_sums = [0]
         self.magnetizations = []
         self.partition_functions = []
         self.exe_time = None
+        self.max_chi = chi
 
-    def init_tensors(self) -> tuple[np.ndarray, np.ndarray]:
+    def init_tensors(self, fixed: bool) -> tuple[np.ndarray, np.ndarray]:
         """
         Returns a tuple of the corner and edge tensor. The tensors are random
         or initialized, depending on the boundary_conditions state and the given
         `C_init` and `T_init`.
         """
         if self.b_c:
-            return self.tensors.C_init(), self.tensors.T_init()
+            self.chi = 2
+            return self.tensors.C_init(fixed), self.tensors.T_init()
 
         C = (  # Initialize random, if no `C_init` is given.
             self.tensors.random((self.chi, self.chi))
@@ -86,13 +91,17 @@ class CtmAlg:
         `max_steps` (int): maximum number of steps before terminating the
         algorithm when convergence has not yet been reached.
         """
+        self.L = max_steps + 4  # system size
         start = time.time()
         for _ in range(max_steps):
             # Compute the new contraction `M` of the corner by inserting an `a` tensor.
             M = self.new_M()
 
+            # Keep increasing chi if there are boundary condition until the
+            # given max_chi.
+            trunc = False if self.b_c and self.chi < self.max_chi else True
             # Use `M` to compute the renormalization tensor
-            U, s = self.new_U(M)
+            U, s = self.new_U(M, trunc)
 
             # Normalize and symmetrize the new corner and edge tensors
             self.C = symm(norm(self.new_C(U)))
@@ -166,13 +175,13 @@ class CtmAlg:
 
         # Reshape M in a matrix
         M = np.reshape(M, (self.chi * self.d, self.chi * self.d))
-
+        k = self.chi
         if trunc:
             # Get the chi largest singular values and corresponding singular vector matrix.
-            k = self.chi
-            U, s, _ = scipy.sparse.linalg.svds(M, k=k, which="LM")
+            U, s, _ = scipy.sparse.linalg.svds(M, k=self.chi, which="LM")
         else:
-            k = 2 * self.chi
+            # Also increase chi when using the untruncated U.
+            self.chi *= 2
             U, s, _ = scipy.linalg.svd(M)
 
         # Reshape U back in a three legged tensor and transpose. Normalize the singular values.

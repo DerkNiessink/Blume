@@ -1,6 +1,5 @@
 from blume.model.CTM_alg import CtmAlg
 from blume.model.tensors import Tensors
-from blume.model.post_props import Prop
 
 import unittest
 import numpy as np
@@ -18,6 +17,7 @@ class TestCtmAlg(unittest.TestCase):
         Set up the algorithm which is used for: `test_shapes`, `test_symmetry`
         and `test_unitarity`.
         """
+
         self.chi = 8
         self.d = 2
         self.alg = CtmAlg(beta=0.5, chi=self.chi, n_states=self.d)
@@ -48,7 +48,7 @@ class TestCtmAlg(unittest.TestCase):
         with self.subTest():
             self.assertEqual(
                 self.untrunc_U.shape,
-                (self.chi, self.d, 2 * self.chi),
+                (2 * self.chi, self.d, self.chi),
                 "the untruncated U is not the right shape.",
             )
         with self.subTest():
@@ -83,7 +83,7 @@ class TestCtmAlg(unittest.TestCase):
         Test that the untruncated renormalization tensor U is unitary.
         """
         untrunc_product = ncon(
-            [self.untrunc_U, self.untrunc_U], ([2, 1, -1], [2, 1, -2])
+            [self.untrunc_U, self.untrunc_U], ([-1, 1, 2], [-2, 1, 2])
         )
         product = ncon([self.U, self.U], ([-1, 1, 2], [-2, 1, 2]))
 
@@ -125,10 +125,28 @@ class TestCtmAlg(unittest.TestCase):
         # untruncated renormalization tensors U in between.
         two_corners_alg = ncon(
             [M, untrunc_U, untrunc_U, M],
-            ([-1, -2, 1, 2], [2, 1, 3], [4, 5, 3], [-3, -4, 5, 4]),
+            ([-1, -2, 1, 2], [3, 1, 2], [3, 5, 4], [-3, -4, 5, 4]),
         )
         # The two should yield the same outcome if the untruncated U is unitary
         self.assertTrue(np.allclose(two_corners, two_corners_alg, rtol=1e-6, atol=1e-6))
+
+    def test_increasing_chi(self):
+        """
+        Test that chi increases to the given chi for a systen with boundary
+        conditions.
+        """
+        # Algorithm with boundary conditions
+        alg_bc = CtmAlg(beta=0.5, chi=16, b_c=True, fixed=True)
+
+        # Check that after one step chi=4
+        alg_bc.exe(max_steps=1)
+        with self.subTest():
+            self.assertTrue(alg_bc.chi == 4)
+
+        # Check that after that chi is and stays 16 after a few steps.
+        alg_bc.exe(max_steps=10)
+        with self.subTest():
+            self.assertTrue(alg_bc.chi == 16)
 
 
 if __name__ == "__main__":
