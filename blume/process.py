@@ -35,19 +35,15 @@ def plot_file(param: int, range: tuple, prop: Prop | str, folder: str):
     plt.plot(temps[upper_index:lower_index], y[upper_index:lower_index], label=label)
 
 
-def read(folder: str, val: int) -> dict:
+def read(folder: str, fn: str, val: int) -> dict:
     """
-    Read the data in a specific folder for a specific chi or L.
+    Read the data in a specific folder for a specific parameter value.
 
     folder (str): name of the folder that contains the data.
-    val (int): chi or L value corresponding to the desired file to read.
+    fn (str): file name of the json file.
+    val (int): value of the parameter corresponding to the desired file to read.
     """
-    try:
-        f = open(f"data/{folder}/chi{val}.json", "r")
-    except FileNotFoundError:
-        f = open(f"data/{folder}/L{val}.json", "r")
-
-    with f:
+    with open(f"data/{folder}/{fn}{val}.json", "r") as f:
         return json.loads(f.read())
 
 
