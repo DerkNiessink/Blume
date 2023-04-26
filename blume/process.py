@@ -8,17 +8,20 @@ except:
     from blume.model.post_props import Prop
 
 
-def plot_file(param: int, range: tuple, prop: Prop | str, folder: str):
+def plot_file(param: str, val: int, range: tuple, prop: Prop | str, folder: str):
     """
     Plot a given variable against temperature.
 
-    `chi` (int): Bond dimension to plot.
+    `param` (str): Parameter to plot.
+    `val` (int): Parameter value to plot.
     `range` (tuple): Range of temperatures to plot.
-    `y` (function | str): Function for calculating the variable or a string of
+    `prop` (Prop | str): Function for calculating the variable or a string of
     the name of the property.
     `folder` (str): Folder that contains the data of the specific chi.
+
+    Returns the created line2D object.
     """
-    data = read(folder, param)
+    data = read(folder, param, val)
 
     # If string is given, the propery already exists in the data, else compute
     # the property with the function.
@@ -31,8 +34,8 @@ def plot_file(param: int, range: tuple, prop: Prop | str, folder: str):
     lower_index = temps.index(lower_value)
     upper_index = temps.index(upper_value)
 
-    label = f"$L={param}$" if data["boundary conditions"] else f"$\chi={param}$"
-    plt.plot(temps[upper_index:lower_index], y[upper_index:lower_index], label=label)
+    (line,) = plt.plot(temps[upper_index:lower_index], y[upper_index:lower_index])
+    return line
 
 
 def read(folder: str, fn: str, val: int) -> dict:

@@ -111,7 +111,8 @@ class CtmAlg:
             self.sv_sums.append(np.sum(s))
 
             if abs(self.sv_sums[-1] - self.sv_sums[-2]) < tol:
-                # Save the computational time
+                # Save the computational time and number of iterations
+                self.n_iter = len(self.sv_sums)
                 self.exe_time = time.time() - start
                 break
 

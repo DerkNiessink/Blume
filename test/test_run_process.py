@@ -2,9 +2,8 @@ import unittest
 from datetime import datetime
 import os
 import shutil
-import sys
 
-from blume.run import sweep_T, save, new_folder
+from blume.run import ModelParameters, Results
 from blume.process import read, compute
 
 
@@ -13,23 +12,16 @@ class TestRun(unittest.TestCase):
     def setUpClass(cls):
         cls.now = datetime.now().strftime("%d-%m %H:%M")
         cls.chi_list = [2, 4]
-        cls.L_list = [4, 8]
-        dir = new_folder()
+        cls.max_steps_list = [4, 8]
 
-        for chi in cls.chi_list:
-            data = sweep_T(chi=chi, T_range=[2.5, 2.6, 2.6], bar=False, which="chi")
-            save(data, dir, msg=False)
+        chi_test = Results("chi", TestRun.chi_list)
+        max_steps_test = Results("max_steps", TestRun.max_steps_list)
+        none_test = Results()
 
-        for L in cls.L_list:
-            data = sweep_T(
-                T_range=(2.5, 2.6),
-                step=0.001,
-                max_steps=L,
-                b_c=True,
-                bar=False,
-                which="max_steps",
-            )
-            save(data, dir, msg=False)
+        params = ModelParameters(T_range=[2.5, 2.6, 2.6], bar=False)
+        chi_test.get(params)
+        max_steps_test.get(params)
+        none_test.get(params)
 
     def test_new_folder(self):
         """
@@ -42,13 +34,18 @@ class TestRun(unittest.TestCase):
         """
         Test that the data is saved in the new directory with the right name.
         """
-        for L in TestRun.L_list:
+        for max_step in TestRun.max_steps_list:
             with self.subTest():
-                self.assertTrue(os.path.isfile(f"data/{TestRun.now}/max_steps{L}.json"))
+                self.assertTrue(
+                    os.path.isfile(f"data/{TestRun.now}/max_steps{max_step}.json")
+                )
 
         for chi in TestRun.chi_list:
             with self.subTest():
                 self.assertTrue(os.path.isfile(f"data/{TestRun.now}/chi{chi}.json"))
+
+        with self.subTest():
+            self.assertTrue(os.path.isfile(f"data/{TestRun.now}/data.json"))
 
     def test_contents(self):
         """
@@ -56,7 +53,7 @@ class TestRun(unittest.TestCase):
         keys and non empty values.
         """
         for chi in TestRun.chi_list:
-            data = read(TestRun.now, chi)
+            data = read(TestRun.now, "chi", chi)
             self.assertTrue(len(data) > 2)
 
             for key in data:
