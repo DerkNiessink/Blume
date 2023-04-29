@@ -53,7 +53,7 @@ class TestRun(unittest.TestCase):
         keys and non empty values.
         """
         for chi in TestRun.chi_list:
-            data = read(TestRun.now, "chi", chi)
+            data = read(TestRun.now, f"chi{chi}")
             self.assertTrue(len(data) > 2)
 
             for key in data:
