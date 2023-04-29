@@ -8,7 +8,7 @@ except:
     from blume.model.post_props import Prop
 
 
-def plot_file(param: str, val: int, range: tuple, prop: Prop | str, folder: str):
+def plot_file(fn: str, range: tuple, prop: Prop | str, folder: str):
     """
     Plot a given variable against temperature.
 
@@ -21,7 +21,7 @@ def plot_file(param: str, val: int, range: tuple, prop: Prop | str, folder: str)
 
     Returns the created line2D object.
     """
-    data = read(folder, param, val)
+    data = read(folder, fn)
 
     # If string is given, the propery already exists in the data, else compute
     # the property with the function.
@@ -38,15 +38,15 @@ def plot_file(param: str, val: int, range: tuple, prop: Prop | str, folder: str)
     return line
 
 
-def read(folder: str, fn: str, val: int) -> dict:
+def read(folder: str, fn: str) -> dict:
     """
     Read the data in a specific folder for a specific parameter value.
 
     folder (str): name of the folder that contains the data.
-    fn (str): file name of the json file.
+    fn (str): file name of the json file: {}.
     val (int): value of the parameter corresponding to the desired file to read.
     """
-    with open(f"data/{folder}/{fn}{val}.json", "r") as f:
+    with open(f"data/{folder}/{fn}.json", "r") as f:
         return json.loads(f.read())
 
 
@@ -58,8 +58,10 @@ def compute(
     Compute the corresponding property for a given dictionary of data from the
     algorithm.
 
-    prop (Prop): Desired thermodynamic property to compute from `data`.
-    data (dict): Dictionary containing the algorithm data.
+    `prop` (Prop): Desired thermodynamic property to compute from data.
+    `data` (dict): Dictionary containing the algorithm data.
+
+    Returns a list with the computed property for all temperatures in data.
     """
     temps, C_tensors, T_tensors, a_tensors, b_tensors = (
         data["temperatures"],
