@@ -114,7 +114,7 @@ class Results:
 
             # Save execution time, temperature and the converged corner and edge and
             # the a and b tensors.
-            data.append((alg.exe_time, T, alg.C, alg.T, alg.a, alg.b))
+            data.append((alg.n_iter, T, alg.C, alg.T, alg.a, alg.b))
 
         # Return both the parameters and algorithm data in the same dict.
         return params.__dict__ | data_to_dict(data)
@@ -150,7 +150,7 @@ def data_to_dict(data: list) -> dict:
     """
     data = list(zip(*data))  # unpack
     return {
-        "execution times": data[0],
+        "number of iterations": data[0],
         "temperatures": data[1],
         "converged corners": data[2],
         "converged edges": data[3],
