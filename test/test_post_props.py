@@ -16,7 +16,7 @@ class TestPostProps(unittest.TestCase):
         alg.exe(tol=1e-7)
         self.assertAlmostEqual(
             m_known,
-            Prop.m(alg.C, alg.T, alg.beta, alg.a, alg.b),
+            Prop.m(alg.C, alg.T, alg.T_fixed, alg.beta, alg.a, alg.b),
             places=6,
         )
 
@@ -30,5 +30,7 @@ class TestPostProps(unittest.TestCase):
         alg = CtmAlg(beta=beta_c, chi=12)
         alg.exe(tol=1e-9)
         self.assertAlmostEqual(
-            Prop.xi(alg.C, alg.T, alg.beta, alg.a, alg.b), 120, delta=20
+            Prop.xi(alg.C, alg.T, alg.T_fixed, alg.beta, alg.a, alg.b),
+            cor_known,
+            delta=20,
         )

@@ -16,12 +16,14 @@ class TestRun(unittest.TestCase):
 
         chi_test = Results("chi", TestRun.chi_list)
         max_steps_test = Results("max_steps", TestRun.max_steps_list)
-        none_test = Results()
+        fixed_test = Results()
 
         params = ModelParameters(T_range=[2.5, 2.6, 2.6], bar=False)
         chi_test.get(params)
         max_steps_test.get(params)
-        none_test.get(params)
+        fixed_test.get(
+            ModelParameters(T_range=[2.5, 2.7], b_c=True, fixed=True, bar=False)
+        )
 
     def test_new_folder(self):
         """
@@ -54,13 +56,23 @@ class TestRun(unittest.TestCase):
         """
         for chi in TestRun.chi_list:
             data = read(TestRun.now, f"chi{chi}")
-            self.assertTrue(len(data) > 2)
+            with self.subTest():
+                self.assertTrue(len(data) > 2)
+
+            # Check that it does not save the fixed edges.
+            with self.subTest():
+                self.assertTrue(data["converged fixed edges"][1] == None)
 
             for key in data:
                 if isinstance(data[key], list):
                     # Check that the lists are not empty
                     with self.subTest():
                         self.assertFalse(data[key] == [])
+
+        data = read(TestRun.now, "data")
+        # Check that it saves the fixed edges.
+        with self.subTest():
+            self.assertFalse(data["converged fixed edges"][1] == None)
 
     @classmethod
     def tearDownClass(cls):

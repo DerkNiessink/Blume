@@ -63,16 +63,19 @@ def compute(
 
     Returns a list with the computed property for all temperatures in data.
     """
-    temps, C_tensors, T_tensors, a_tensors, b_tensors = (
+    temps, C_tensors, T_tensors, T_fixed_tensors, a_tensors, b_tensors = (
         data["temperatures"],
         np.asarray(data["converged corners"]),
         np.asarray(data["converged edges"]),
+        np.asarray(data["converged fixed edges"]),
         np.asarray(data["a tensors"]),
         np.asarray(data["b tensors"]),
     )
     return [
-        prop(C, T, 1 / temp, a, b)
-        for temp, C, T, a, b in zip(temps, C_tensors, T_tensors, a_tensors, b_tensors)
+        prop(C, T, T_fixed, 1 / temp, a, b)
+        for temp, C, T, T_fixed, a, b in zip(
+            temps, C_tensors, T_tensors, T_fixed_tensors, a_tensors, b_tensors
+        )
     ]
 
 

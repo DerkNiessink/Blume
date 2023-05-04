@@ -24,6 +24,7 @@ class ModelParameters:
     `use_prev` (bool): If true, the converged corner and edge from the previous
     iteration is used as initial tensors, else the initial tensors are random.
     `b_c` (bool): Set a fixed boundary conditions on the system if True.
+    `fixed`(bool): Compute an additional edge tensor with an initial fixed spin.
     `bar` (bool): If true, a progress bar and save messages are displayed.
     """
 
@@ -57,7 +58,7 @@ class Results:
         `params` (ModelParameters): class instance of the dataclass containing the
         model parameters.
         """
-        dir = new_folder()
+        self.dir = new_folder()
 
         if params == None:
             params = self.default_params
@@ -66,10 +67,10 @@ class Results:
             for val in self.range:
                 setattr(params, self.varying_param, val)
                 data = self.sweep_T(params)
-                self.save(data, dir, params.bar)
+                self.save(data, params.bar)
         else:
             data = self.sweep_T(params)
-            self.save(data, dir, params.bar)
+            self.save(data, params.bar)
 
     def sweep_T(self, params: ModelParameters):
         """
@@ -114,12 +115,12 @@ class Results:
 
             # Save execution time, temperature and the converged corner and edge and
             # the a and b tensors.
-            data.append((alg.n_iter, T, alg.C, alg.T, alg.a, alg.b))
+            data.append((alg.n_iter, T, alg.C, alg.T, alg.T_fixed, alg.a, alg.b))
 
         # Return both the parameters and algorithm data in the same dict.
         return params.__dict__ | data_to_dict(data)
 
-    def save(self, data: dict, dir: str, msg: bool):
+    def save(self, data: dict, msg: bool):
         """
         Save the data containing physical properties for varying beta in the `data`
         folder.
@@ -129,7 +130,7 @@ class Results:
         `msg` (bool): If true, print a message at the start and end of saving.
         """
         if msg:
-            print(f"Saving data in folder: '{dir}'")
+            print(f"Saving data in folder: '{self.dir}'")
 
         # Name the file `varying_param` with the value.
         if self.varying_param:
@@ -137,7 +138,7 @@ class Results:
         else:
             fn = "data"
 
-        with open(f"data/{dir}/{fn}.json", "w") as fp:
+        with open(f"data/{self.dir}/{fn}.json", "w") as fp:
             json.dump(data, fp, cls=NumpyEncoder)
 
         if msg:
@@ -154,8 +155,9 @@ def data_to_dict(data: list) -> dict:
         "temperatures": data[1],
         "converged corners": data[2],
         "converged edges": data[3],
-        "a tensors": data[4],
-        "b tensors": data[5],
+        "converged fixed edges": data[4],
+        "a tensors": data[5],
+        "b tensors": data[6],
     }
 
 

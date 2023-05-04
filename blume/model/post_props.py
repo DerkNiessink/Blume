@@ -11,7 +11,14 @@ class Prop:
     """
 
     @staticmethod
-    def Z(C, T, beta, a, b) -> float:
+    def Z(
+        C: np.ndarray,
+        T: np.ndarray,
+        T_fixed: np.ndarray,
+        beta: float,
+        a: np.ndarray,
+        b: np.ndarray,
+    ) -> float:
         """
         Return the value for the partition function of the system.
         """
@@ -33,7 +40,14 @@ class Prop:
         )
 
     @staticmethod
-    def m(C, T, beta, a, b) -> float:
+    def m(
+        C: np.ndarray,
+        T: np.ndarray,
+        T_fixed: np.ndarray,
+        beta: float,
+        a: np.ndarray,
+        b: np.ndarray,
+    ) -> float:
         """
         Return the value for the magnetization of the system.
         """
@@ -53,12 +67,19 @@ class Prop:
                         [10, 11],
                     ),
                 )
-                / Prop.Z(C, T, beta, a, b)
+                / Prop.Z(C, T, T_fixed, beta, a, b)
             )
         )
 
     @staticmethod
-    def f(C, T, beta, a, b) -> float:
+    def f(
+        C: np.ndarray,
+        T: np.ndarray,
+        T_fixed: np.ndarray,
+        beta: float,
+        a: np.ndarray,
+        b: np.ndarray,
+    ) -> float:
         """
         Return the free energy of the system.
         """
@@ -69,10 +90,19 @@ class Prop:
                 ([1, 2], [1, 3], [2, 5, 4], [3, 6, 4], [5, 7], [6, 7]),
             )
         ) ** 2
-        return float(-(1 / beta) * np.log(Prop.Z(C, T, beta, a, b) * corners / denom))
+        return float(
+            -(1 / beta) * np.log(Prop.Z(C, T, T_fixed, beta, a, b) * corners / denom)
+        )
 
     @staticmethod
-    def Es(C, T, beta, a, b) -> float:
+    def Es(
+        C: np.ndarray,
+        T: np.ndarray,
+        T_fixed: np.ndarray,
+        beta: float,
+        a: np.ndarray,
+        b: np.ndarray,
+    ) -> float:
         """
         Return the energy per site of the system.
         """
@@ -96,7 +126,14 @@ class Prop:
         return -float(num / denom) * 2
 
     @staticmethod
-    def xi(C, T, beta, a, b) -> float:
+    def xi(
+        C: np.ndarray,
+        T: np.ndarray,
+        T_fixed: np.ndarray,
+        beta: float,
+        a: np.ndarray,
+        b: np.ndarray,
+    ) -> float:
         """
         Return the correlation length of the system.
         """
@@ -105,3 +142,80 @@ class Prop:
         M = M.reshape(T.shape[0] ** 2, T.shape[0] ** 2)
         w = scipy.linalg.eigh(M, eigvals_only=True)
         return 1 / np.log(abs(w[-1]) / abs(w[-2]))
+
+    @staticmethod
+    def Z_fixed(
+        C: np.ndarray,
+        T: np.ndarray,
+        T_fixed: np.ndarray,
+        beta: float,
+        a: np.ndarray,
+        b: np.ndarray,
+    ) -> float:
+        """
+        Return the value for the partition function of a fixed system.
+        """
+        return float(
+            ncon(
+                [C, T_fixed, T, C, a, C, T, T, C],
+                (
+                    [1, 2],
+                    [1, 4, 3],
+                    [2, 8, 7],
+                    [4, 5],
+                    [3, 6, 7, 9],
+                    [8, 12],
+                    [5, 10, 6],
+                    [11, 12, 9],
+                    [10, 11],
+                ),
+            )
+        )
+
+    @staticmethod
+    def xi_fixed(
+        C: np.ndarray,
+        T: np.ndarray,
+        T_fixed: np.ndarray,
+        beta: float,
+        a: np.ndarray,
+        b: np.ndarray,
+    ):
+        """
+        Return the correlation length for a system with a fixed edge spin.
+        """
+        return Prop.Z_fixed(C, T, T_fixed, beta, a, b) / Prop.Z(
+            C, T, T_fixed, beta, a, b
+        )
+
+    @staticmethod
+    def m_fixed(
+        C: np.ndarray,
+        T: np.ndarray,
+        T_fixed: np.ndarray,
+        beta: float,
+        a: np.ndarray,
+        b: np.ndarray,
+    ):
+        """
+        Return the magnetization for a system with a fixed edge spin.
+        """
+        return abs(
+            float(
+                ncon(
+                    [C, T_fixed, T, C, b, C, T, T, C],
+                    (
+                        [1, 2],
+                        [1, 4, 3],
+                        [2, 8, 7],
+                        [4, 5],
+                        [3, 6, 7, 9],
+                        [8, 12],
+                        [5, 10, 6],
+                        [11, 12, 9],
+                        [10, 11],
+                    ),
+                )
+                / Prop.Z_fixed(C, T, T_fixed, beta, a, b)
+            )
+        )

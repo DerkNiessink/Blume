@@ -136,7 +136,7 @@ class TestCtmAlg(unittest.TestCase):
         conditions.
         """
         # Algorithm with boundary conditions
-        alg_bc = CtmAlg(beta=0.5, chi=16, b_c=True, fixed=True)
+        alg_bc = CtmAlg(beta=0.5, chi=29, b_c=True, fixed=True)
 
         # Check that after one step chi=4
         alg_bc.exe(max_steps=1)
@@ -146,7 +146,15 @@ class TestCtmAlg(unittest.TestCase):
         # Check that after that chi is and stays 16 after a few steps.
         alg_bc.exe(max_steps=10)
         with self.subTest():
-            self.assertTrue(alg_bc.chi == 16)
+            self.assertTrue(alg_bc.chi == 29)
+
+        # Check that all tensors are computed: both the normal and fixed tensors.
+        with self.subTest():
+            self.assertTrue(
+                alg_bc.C is not None
+                and alg_bc.T is not None
+                and alg_bc.T_fixed is not None
+            )
 
 
 if __name__ == "__main__":

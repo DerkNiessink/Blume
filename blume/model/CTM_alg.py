@@ -21,8 +21,9 @@ class CtmAlg:
     `beta` (float): Equivalent to the inverse of the temperature.
     `b_c` (bool): If true the edge and corner tensors are initialized with the
     boundary condition (bc) tensors, else random.
-    `fixed` (bool): If true fix the spin on the corner to one spin. Only applies
-    for a system with boundary conditions.
+    `fixed` (bool): If true fix the spin on the the edge to one spin. Only
+    applies for a system with boundary conditions. Compute both the fixed and
+    unfixed edge.
     `chi` (int): bond dimension of the edge and corner tensors.
     `C_init` (np.array) and `T_init` (np.array): Optional initial corner and
     edge tensor respectively of shapes (chi, chi) and (chi, chi, d). If boundary
@@ -47,38 +48,43 @@ class CtmAlg:
         self.b_c = b_c
         self.chi = chi
         self.d = n_states
-        self.C_init = C_init
-        self.T_init = T_init
-        self.C, self.T = self.init_tensors(fixed)
+
+        # Keep track of both the fixed and unfixed tensors.
+        self.C, self.T, self.T_fixed = self.init_tensors(
+            C_init=C_init, T_init=T_init, fixed=fixed
+        )
         self.a = self.tensors.a()
         self.b = self.tensors.b()
         self.sv_sums = [0]
-        self.magnetizations = []
-        self.partition_functions = []
         self.exe_time = None
         self.max_chi = chi
 
-    def init_tensors(self, fixed: bool) -> tuple[np.ndarray, np.ndarray]:
+    def init_tensors(
+        self, fixed=False, C_init=None, T_init=None
+    ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
         """
         Returns a tuple of the corner and edge tensor. The tensors are random
-        or initialized, depending on the boundary_conditions state and the given
-        `C_init` and `T_init`.
+        or initialized, depending on the boundary_conditions state, the given
+        `C_init` and `T_init` and the fixed_corner and/or fixed_edge state.
+
+        `fixed` (bool): If true, fix the edge spin to one direction.
+        `C_init` (np.ndarray | None): Optional initial corner tensor.
+        `T_init` (np.ndarray | None): Optional initial edge tensor.
         """
         if self.b_c:
             self.chi = 2
-            return self.tensors.C_init(fixed), self.tensors.T_init()
+            T_fixed = self.tensors.T_init(fixed) if fixed else None
+            return self.tensors.C_init(), self.tensors.T_init(), T_fixed
 
         C = (  # Initialize random, if no `C_init` is given.
-            self.tensors.random((self.chi, self.chi))
-            if self.C_init is None
-            else self.C_init
+            self.tensors.random((self.chi, self.chi)) if C_init is None else C_init
         )
         T = (  # Initialize random, if no `T_init` is given.
             self.tensors.random((self.chi, self.chi, self.d))
-            if self.T_init is None
-            else self.T_init
+            if T_init is None
+            else T_init
         )
-        return C, T
+        return C, T, None
 
     def exe(self, tol=1e-3, max_steps=10000):
         """
@@ -91,7 +97,6 @@ class CtmAlg:
         `max_steps` (int): maximum number of steps before terminating the
         algorithm when convergence has not yet been reached.
         """
-        self.L = max_steps + 4  # system size
         start = time.time()
         for _ in range(max_steps):
             # Compute the new contraction `M` of the corner by inserting an `a` tensor.
@@ -107,21 +112,26 @@ class CtmAlg:
             self.C = symm(norm(self.new_C(U)))
             self.T = symm(norm(self.new_T(U)))
 
+            # Keep track of edge tensor with fixed spins if given.
+            if self.T_fixed is not None:
+                self.T_fixed = symm(norm(self.new_T(U, fixed=True)))
+
             # Save sum of singular values
             self.sv_sums.append(np.sum(s))
 
             if abs(self.sv_sums[-1] - self.sv_sums[-2]) < tol:
-                # Save the computational time and number of iterations
-                self.n_iter = len(self.sv_sums)
-                self.exe_time = time.time() - start
                 break
+
+        # Save the computational time and number of iterations
+        self.n_iter = len(self.sv_sums)
+        self.exe_time = time.time() - start
 
     def new_C(self, U: np.ndarray) -> np.ndarray:
         """
         Insert an `a` tensor and evaluate a corner matrix `new_M` by contracting
         the new corner. Renormalized the new corner with the given `U` matrix.
 
-        `U` (np.array): The renormalization tensor of shape (chi, d, chi).
+        `U` (np.ndarray): The renormalization tensor of shape (chi, d, chi).
 
         Returns an array of the new corner tensor of shape (chi, chi)
         """
@@ -142,16 +152,19 @@ class CtmAlg:
             ([1, 2], [-1, 1, 3], [2, -3, 4], [-2, 3, 4, -4]),
         )
 
-    def new_T(self, U: np.ndarray) -> np.ndarray:
+    def new_T(self, U: np.ndarray, fixed=False) -> np.ndarray:
         """
         Insert an `a` tensor and evaluate a new edge tensor. Renormalize
         the edge tensor by contracting with the given truncated `U` tensor.
 
-        `U` (np.array): The renormalization tensor of shape (chi, d, chi).
+        `U` (ndarray): The renormalization tensor of shape (chi, d, chi).
+        `fixed` (ndarray): If true, evaluate the new edge tensor with an initial
+        fixed spin.
 
         Returns an array of the new edge tensor of shape (chi, chi, d).
         """
-        M = ncon([self.T, self.a], ([-1, -2, 1], [1, -3, -4, -5]))
+        T = self.T_fixed if fixed else self.T
+        M = ncon([T, self.a], ([-1, -2, 1], [1, -3, -4, -5]))
         return ncon(
             [U, M, U],
             ([-1, 3, 1], [1, 2, 3, 4, -3], [-2, 4, 2]),
@@ -177,8 +190,11 @@ class CtmAlg:
         # Reshape M in a matrix
         M = np.reshape(M, (self.chi * self.d, self.chi * self.d))
         k = self.chi
+
         if trunc:
             # Get the chi largest singular values and corresponding singular vector matrix.
+            # Truncate down to the desired chi value, if not yet reached.
+            self.chi = self.max_chi
             U, s, _ = scipy.sparse.linalg.svds(M, k=self.chi, which="LM")
         else:
             # Also increase chi when using the untruncated U.
