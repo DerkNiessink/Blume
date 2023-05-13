@@ -1,7 +1,4 @@
-try:
-    from model.CTM_alg import CtmAlg
-except:
-    from blume.model.CTM_alg import CtmAlg
+from .model.CTM_alg import CtmAlg
 
 import numpy as np
 import json
@@ -14,7 +11,10 @@ from dataclasses import dataclass
 @dataclass
 class ModelParameters:
     """
+    `model` (str): "ising" or "blume".
     `T_range` (tuple | list): Temperature range or list to sweep.
+    `coupling` (float): Crystal-field coupling parameter, only applies to
+    Blume-Capel model.
     `step` (float): Stepsize of the varying temperature.
     `tol` (float): Convergence criterion.
     `chi` (int): Bond dimension.
@@ -28,9 +28,12 @@ class ModelParameters:
     `bar` (bool): If true, a progress bar and save messages are displayed.
     """
 
+    model: str = "ising"
     T_range: list | tuple = (2, 2.3)
+    coupling: float = 1
     step: float = 0.001
     tol: float = 1e-7
+    count: int = 10
     chi: int = 2
     max_steps: int = int(10e8)
     use_prev: bool = False
@@ -60,7 +63,7 @@ class Results:
         """
         self.dir = new_folder()
 
-        if params == None:
+        if params is None:
             params = self.default_params
 
         if self.varying_param:
@@ -88,7 +91,7 @@ class Results:
 
         # Allow a list or range tuple for `T_range`.
         temps = (
-            [T for T in params.T_range]
+            params.T_range
             if isinstance(params.T_range, list)
             else np.arange(params.T_range[0], params.T_range[1], params.step)
         )
@@ -99,23 +102,37 @@ class Results:
             if self.varying_param
             else None
         )
-        for T in tqdm(temps, desc=desc, disable=not (params.bar)):
+        for T in tqdm(temps, desc=desc, disable=not (params.bar)):  # type: ignore
             alg = CtmAlg(
                 1 / T,
+                model=params.model,
+                coupling=params.coupling,
                 chi=params.chi,
                 C_init=C_init,
                 T_init=T_init,
                 b_c=params.b_c,
                 fixed=params.fixed,
             )
-            alg.exe(params.tol, params.max_steps)
+            alg.exe(params.tol, params.count, params.max_steps)
 
             if params.use_prev:
                 C_init, T_init = alg.C, alg.T
 
             # Save execution time, temperature and the converged corner and edge and
             # the a and b tensors.
-            data.append((alg.n_iter, T, alg.C, alg.T, alg.T_fixed, alg.a, alg.b))
+            data.append(
+                (
+                    alg.n_iter,
+                    T,
+                    alg.C,
+                    alg.T,
+                    alg.T_fixed,
+                    alg.a,
+                    alg.a_fixed,
+                    alg.b,
+                    alg.b_fixed,
+                )
+            )
 
         # Return both the parameters and algorithm data in the same dict.
         return params.__dict__ | data_to_dict(data)
@@ -157,7 +174,9 @@ def data_to_dict(data: list) -> dict:
         "converged edges": data[3],
         "converged fixed edges": data[4],
         "a tensors": data[5],
-        "b tensors": data[6],
+        "a_fixed tensors": data[6],
+        "b tensors": data[7],
+        "b_fixed tensors": data[8],
     }
 
 

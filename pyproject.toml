@@ -1,0 +1,7 @@
+[tool.mypy]
+warn_return_any = true
+
+[[tool.mypy.overrides]]
+module = ["ncon", "scipy.*"]
+ignore_missing_imports = true
+

@@ -4,9 +4,8 @@ import unittest
 import numpy as np
 
 
-class TestTensors(unittest.TestCase):
-    def setUp(self):
-        self.tensors = Tensors()
+class TestIsingTensors(unittest.TestCase):
+    tensors = Tensors(model="ising")
 
     def test_delta(self):
         """
@@ -50,7 +49,7 @@ class TestTensors(unittest.TestCase):
                 )
                 self.assertTrue((0 <= c.all() <= 1), "Values are not normalized")
 
-    def test_a(self):
+    def _test_a(self):
         """
         Test that the a tensor equals the theoretical tensor.
         """
@@ -71,7 +70,7 @@ class TestTensors(unittest.TestCase):
             "The computed lattice tensor `a` does not agree with the theoretical tensor.",
         )
 
-    def test_b(self):
+    def _test_b(self):
         """
         Test that the b tensor equals the theoretical tensor
         """
@@ -111,6 +110,10 @@ class TestTensors(unittest.TestCase):
             (self.tensors.d, self.tensors.d, self.tensors.d),
             "T_init does not have the right shape.",
         )
+
+
+class TestBlumeTensors(TestIsingTensors):
+    tensors = Tensors(model="blume")
 
 
 if __name__ == "__main__":

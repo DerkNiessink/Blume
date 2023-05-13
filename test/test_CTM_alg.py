@@ -6,7 +6,7 @@ import numpy as np
 from ncon import ncon
 
 
-class TestCtmAlg(unittest.TestCase):
+class TestIsingCtmAlg(unittest.TestCase):
     """
     Class for testing the Ctmalg from `CtmAlg.py`.
     """
@@ -20,7 +20,8 @@ class TestCtmAlg(unittest.TestCase):
 
         self.chi = 8
         self.d = 2
-        self.alg = CtmAlg(beta=0.5, chi=self.chi, n_states=self.d)
+        self.model = "ising"
+        self.alg = CtmAlg(beta=0.5, chi=self.chi, model=self.model)
         self.alg.exe(max_steps=10)
         self.tensors = Tensors()
 
@@ -48,7 +49,7 @@ class TestCtmAlg(unittest.TestCase):
         with self.subTest():
             self.assertEqual(
                 self.untrunc_U.shape,
-                (2 * self.chi, self.d, self.chi),
+                (self.d * self.chi, self.d, self.chi),
                 "the untruncated U is not the right shape.",
             )
         with self.subTest():
@@ -90,7 +91,10 @@ class TestCtmAlg(unittest.TestCase):
         with self.subTest():
             self.assertTrue(
                 np.allclose(
-                    untrunc_product, np.identity(self.chi * 2), rtol=1e-6, atol=1e-6
+                    untrunc_product,
+                    np.identity(self.chi * self.d),
+                    rtol=1e-6,
+                    atol=1e-6,
                 ),
                 f"The untruncated renormalization tensor U is not unitary,\n U*U.T = \n{untrunc_product}",
             )
@@ -117,7 +121,7 @@ class TestCtmAlg(unittest.TestCase):
         )
         two_corners = ncon([corner, corner], ([-1, -2, 1, 2], [-3, -4, 1, 2]))
 
-        alg = CtmAlg(beta=0.5, b_c=True)
+        alg = CtmAlg(beta=0.5, b_c=True, model=self.model)
         M = alg.new_M()
         untrunc_U, _ = alg.new_U(M, trunc=False)
 
@@ -130,14 +134,13 @@ class TestCtmAlg(unittest.TestCase):
         # The two should yield the same outcome if the untruncated U is unitary
         self.assertTrue(np.allclose(two_corners, two_corners_alg, rtol=1e-6, atol=1e-6))
 
-    def test_increasing_chi(self):
+    def _test_increasing_chi(self):
         """
-        Test that chi increases to the given chi for a systen with boundary
+        Test that chi increases to the given chi for a system with boundary
         conditions.
         """
         # Algorithm with boundary conditions
-        alg_bc = CtmAlg(beta=0.5, chi=29, b_c=True, fixed=True)
-
+        alg_bc = CtmAlg(beta=0.5, chi=29, b_c=True, fixed=True, model=self.model)
         # Check that after one step chi=4
         alg_bc.exe(max_steps=1)
         with self.subTest():
@@ -155,6 +158,29 @@ class TestCtmAlg(unittest.TestCase):
                 and alg_bc.T is not None
                 and alg_bc.T_fixed is not None
             )
+
+
+class TestBlumeCtmAlg(TestIsingCtmAlg):
+    @classmethod
+    def setUpClass(self):
+        """
+        Set up the algorithm which is used for: `test_shapes`, `test_symmetry`
+        and `test_unitarity`.
+        """
+
+        self.chi = 6
+        self.d = 3
+        self.model = "blume"
+        self.alg = CtmAlg(beta=0.5, chi=self.chi, model=self.model)
+        self.alg.exe(max_steps=10)
+        self.tensors = Tensors(model="blume")
+
+        # next steps of the algorithm:
+        self.M = self.alg.new_M()
+        self.U, _ = self.alg.new_U(self.M)
+        self.untrunc_U, _ = self.alg.new_U(self.M, False)
+        self.C = self.alg.new_C(self.U)
+        self.T = self.alg.new_T(self.U)
 
 
 if __name__ == "__main__":

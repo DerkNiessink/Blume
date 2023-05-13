@@ -2,6 +2,23 @@ import numpy as np
 from ncon import ncon
 import scipy.linalg
 import scipy.sparse.linalg
+from typing import Callable
+
+
+PropFunction = Callable[[dict], float]
+
+
+def unpack(data: dict):
+    return (
+        data["C"],
+        data["T"],
+        data["T_fixed"],
+        data["beta"],
+        data["a"],
+        data["a_fixed"],
+        data["b"],
+        data["b_fixed"],
+    )
 
 
 class Prop:
@@ -11,17 +28,11 @@ class Prop:
     """
 
     @staticmethod
-    def Z(
-        C: np.ndarray,
-        T: np.ndarray,
-        T_fixed: np.ndarray,
-        beta: float,
-        a: np.ndarray,
-        b: np.ndarray,
-    ) -> float:
+    def Z(data: dict) -> float:
         """
         Return the value for the partition function of the system.
         """
+        C, T, T_fixed, beta, a, a_fixed, b, b_fixed = unpack(data)
         return float(
             ncon(
                 [C, T, T, C, a, C, T, T, C],
@@ -40,17 +51,11 @@ class Prop:
         )
 
     @staticmethod
-    def m(
-        C: np.ndarray,
-        T: np.ndarray,
-        T_fixed: np.ndarray,
-        beta: float,
-        a: np.ndarray,
-        b: np.ndarray,
-    ) -> float:
+    def m(data: dict) -> float:
         """
         Return the value for the magnetization of the system.
         """
+        C, T, T_fixed, beta, a, a_fixed, b, b_fixed = unpack(data)
         return abs(
             float(
                 ncon(
@@ -67,22 +72,16 @@ class Prop:
                         [10, 11],
                     ),
                 )
-                / Prop.Z(C, T, T_fixed, beta, a, b)
+                / Prop.Z(data)
             )
         )
 
     @staticmethod
-    def f(
-        C: np.ndarray,
-        T: np.ndarray,
-        T_fixed: np.ndarray,
-        beta: float,
-        a: np.ndarray,
-        b: np.ndarray,
-    ) -> float:
+    def f(data: dict) -> float:
         """
         Return the free energy of the system.
         """
+        C, T, T_fixed, beta, a, a_fixed, b, b_fixed = unpack(data)
         corners = ncon([C, C, C, C], ([1, 2], [1, 3], [3, 4], [4, 2]))
         denom = (
             ncon(
@@ -90,22 +89,14 @@ class Prop:
                 ([1, 2], [1, 3], [2, 5, 4], [3, 6, 4], [5, 7], [6, 7]),
             )
         ) ** 2
-        return float(
-            -(1 / beta) * np.log(Prop.Z(C, T, T_fixed, beta, a, b) * corners / denom)
-        )
+        return float(-(1 / beta) * np.log(Prop.Z(data) * corners / denom))
 
     @staticmethod
-    def Es(
-        C: np.ndarray,
-        T: np.ndarray,
-        T_fixed: np.ndarray,
-        beta: float,
-        a: np.ndarray,
-        b: np.ndarray,
-    ) -> float:
+    def Es(data: dict) -> float:
         """
         Return the energy per site of the system.
         """
+        C, T, T_fixed, beta, a, a_fixed, b, b_fixed = unpack(data)
         a_corner = ncon(
             [C, T, T, a],
             ([1, 2], [-1, 1, 3], [2, -3, 4], [-2, 3, 4, -4]),
@@ -126,38 +117,26 @@ class Prop:
         return -float(num / denom) * 2
 
     @staticmethod
-    def xi(
-        C: np.ndarray,
-        T: np.ndarray,
-        T_fixed: np.ndarray,
-        beta: float,
-        a: np.ndarray,
-        b: np.ndarray,
-    ) -> float:
+    def xi(data: dict) -> float:
         """
         Return the correlation length of the system.
         """
+        C, T, T_fixed, beta, a, a_fixed, b, b_fixed = unpack(data)
         M = ncon([T, T], ([-1, -3, 3], [-2, -4, 3]))
         # Reshape to matrix
         M = M.reshape(T.shape[0] ** 2, T.shape[0] ** 2)
         w = scipy.linalg.eigh(M, eigvals_only=True)
-        return 1 / np.log(abs(w[-1]) / abs(w[-2]))
+        return float(1 / np.log(abs(w[-1]) / abs(w[-2])))
 
     @staticmethod
-    def Z_fixed(
-        C: np.ndarray,
-        T: np.ndarray,
-        T_fixed: np.ndarray,
-        beta: float,
-        a: np.ndarray,
-        b: np.ndarray,
-    ) -> float:
+    def Z_fixed(data: dict) -> float:
         """
         Return the value for the partition function of a fixed system.
         """
+        C, T, T_fixed, beta, a, a_fixed, b, b_fixed = unpack(data)
         return float(
             ncon(
-                [C, T_fixed, T, C, a, C, T, T, C],
+                [C, T_fixed, T, C, b, C, T, T, C],
                 (
                     [1, 2],
                     [1, 4, 3],
@@ -173,49 +152,9 @@ class Prop:
         )
 
     @staticmethod
-    def xi_fixed(
-        C: np.ndarray,
-        T: np.ndarray,
-        T_fixed: np.ndarray,
-        beta: float,
-        a: np.ndarray,
-        b: np.ndarray,
-    ):
-        """
-        Return the correlation length for a system with a fixed edge spin.
-        """
-        return Prop.Z_fixed(C, T, T_fixed, beta, a, b) / Prop.Z(
-            C, T, T_fixed, beta, a, b
-        )
-
-    @staticmethod
-    def m_fixed(
-        C: np.ndarray,
-        T: np.ndarray,
-        T_fixed: np.ndarray,
-        beta: float,
-        a: np.ndarray,
-        b: np.ndarray,
-    ):
+    def m_fixed(data: dict):
         """
         Return the magnetization for a system with a fixed edge spin.
         """
-        return abs(
-            float(
-                ncon(
-                    [C, T_fixed, T, C, b, C, T, T, C],
-                    (
-                        [1, 2],
-                        [1, 4, 3],
-                        [2, 8, 7],
-                        [4, 5],
-                        [3, 6, 7, 9],
-                        [8, 12],
-                        [5, 10, 6],
-                        [11, 12, 9],
-                        [10, 11],
-                    ),
-                )
-                / Prop.Z_fixed(C, T, T_fixed, beta, a, b)
-            )
-        )
+        C, T, T_fixed, beta, a, a_fixed, b, b_fixed = unpack(data)
+        return np.sqrt(abs(float(Prop.Z_fixed(data) / Prop.Z(data))))

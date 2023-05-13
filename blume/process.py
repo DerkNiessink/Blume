@@ -1,14 +1,13 @@
 import json
 import matplotlib.pyplot as plt
 import numpy as np
+import typing
 
-try:
-    from model.post_props import Prop
-except:
-    from blume.model.post_props import Prop
+from .model.post_props import Prop, PropFunction
 
 
-def plot_file(fn: str, range: tuple, prop: Prop | str, folder: str):
+@typing.no_type_check
+def plot_file(fn: str, range: tuple, prop: Prop | str, folder: str) -> plt.Line2D:
     """
     Plot a given variable against temperature.
 
@@ -43,15 +42,15 @@ def read(folder: str, fn: str) -> dict:
     Read the data in a specific folder for a specific parameter value.
 
     folder (str): name of the folder that contains the data.
-    fn (str): file name of the json file: {}.
+    fn (str): file name of the json file.
     val (int): value of the parameter corresponding to the desired file to read.
     """
     with open(f"data/{folder}/{fn}.json", "r") as f:
-        return json.loads(f.read())
+        return dict(json.loads(f.read()))
 
 
 def compute(
-    prop: Prop,
+    prop: PropFunction,
     data: dict,
 ) -> list:
     """
@@ -63,23 +62,34 @@ def compute(
 
     Returns a list with the computed property for all temperatures in data.
     """
-    temps, C_tensors, T_tensors, T_fixed_tensors, a_tensors, b_tensors = (
+    data_zip = zip(
         data["temperatures"],
         np.asarray(data["converged corners"]),
         np.asarray(data["converged edges"]),
         np.asarray(data["converged fixed edges"]),
         np.asarray(data["a tensors"]),
+        np.asarray(data["a_fixed tensors"]),
         np.asarray(data["b tensors"]),
+        np.asarray(data["b_fixed tensors"]),
     )
     return [
-        prop(C, T, T_fixed, 1 / temp, a, b)
-        for temp, C, T, T_fixed, a, b in zip(
-            temps, C_tensors, T_tensors, T_fixed_tensors, a_tensors, b_tensors
+        prop(
+            {
+                "beta": 1 / item[0],
+                "C": item[1],
+                "T": item[2],
+                "T_fixed": item[3],
+                "a": item[4],
+                "a_fixed": item[5],
+                "b": item[6],
+                "b_fixed": item[7],
+            }
         )
+        for item in data_zip
     ]
 
 
-def exact_m(range: tuple[float], step=0.0001) -> list:
+def exact_m(range: tuple[float, float], step=0.0001) -> tuple[list, list]:
     """
     Give the exact solution for the magnetization on a given temperature range.
 

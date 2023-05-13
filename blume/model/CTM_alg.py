@@ -3,11 +3,9 @@ import scipy.sparse.linalg
 import scipy.linalg
 from ncon import ncon
 import time
+from typing import Union
 
-try:
-    from model.tensors import Tensors, Methods
-except:
-    from blume.model.tensors import Tensors, Methods
+from .tensors import Tensors, Methods
 
 norm = Methods.normalize
 symm = Methods.symmetrize
@@ -19,6 +17,8 @@ class CtmAlg:
     partition function and other physical properties of the Ising model.
 
     `beta` (float): Equivalent to the inverse of the temperature.
+    `model` (str): "ising" or "blume"
+    `coupling` (float): crystal-field coupling parameter for the Blume-Capel model.
     `b_c` (bool): If true the edge and corner tensors are initialized with the
     boundary condition (bc) tensors, else random.
     `fixed` (bool): If true fix the spin on the the edge to one spin. Only
@@ -29,25 +29,24 @@ class CtmAlg:
     edge tensor respectively of shapes (chi, chi) and (chi, chi, d). If boundary
     conditions is true, the tensors are overwritten by the initial bc tensors.
     If only one of the two is given, the other will be random initialized.
-    `n_states` (int): number of possible spin (energy) states (= 2 for Ising
-    model).
     """
 
     def __init__(
         self,
         beta: float,
+        model="ising",
+        coupling=1,
         b_c=False,
         fixed=False,
         chi=2,
         C_init=None,
         T_init=None,
-        n_states=2,
     ):
-        self.tensors = Tensors(beta)
+        self.tensors = Tensors(beta, model, coupling)
+        self.d = self.tensors.d
         self.beta = beta
         self.b_c = b_c
         self.chi = chi
-        self.d = n_states
 
         # Keep track of both the fixed and unfixed tensors.
         self.C, self.T, self.T_fixed = self.init_tensors(
@@ -55,13 +54,15 @@ class CtmAlg:
         )
         self.a = self.tensors.a()
         self.b = self.tensors.b()
+        self.b_fixed = self.tensors.b(adj=True)
+        self.a_fixed = self.tensors.a(adj=True)
         self.sv_sums = [0]
         self.exe_time = None
         self.max_chi = chi
 
     def init_tensors(
         self, fixed=False, C_init=None, T_init=None
-    ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    ) -> tuple[np.ndarray, np.ndarray, Union[None, np.ndarray]]:
         """
         Returns a tuple of the corner and edge tensor. The tensors are random
         or initialized, depending on the boundary_conditions state, the given
@@ -72,7 +73,7 @@ class CtmAlg:
         `T_init` (np.ndarray | None): Optional initial edge tensor.
         """
         if self.b_c:
-            self.chi = 2
+            self.chi = self.d
             T_fixed = self.tensors.T_init(fixed) if fixed else None
             return self.tensors.C_init(), self.tensors.T_init(), T_fixed
 
@@ -86,7 +87,7 @@ class CtmAlg:
         )
         return C, T, None
 
-    def exe(self, tol=1e-3, max_steps=10000):
+    def exe(self, tol=1e-3, count=10, max_steps=10000):
         """
         Execute the CTM algorithm for a number of steps `n_steps`. For each
         step, an `a` tensor is inserted, from which a new edge and corner tensor
@@ -94,10 +95,13 @@ class CtmAlg:
         symmetrized every step.
 
         `tol` (float): convergence criterion.
+        `count` (int): Consecutive times the tolerance has to be satified before
+        terminating the algorithm.
         `max_steps` (int): maximum number of steps before terminating the
         algorithm when convergence has not yet been reached.
         """
         start = time.time()
+        tol_counter = 0
         for _ in range(max_steps):
             # Compute the new contraction `M` of the corner by inserting an `a` tensor.
             M = self.new_M()
@@ -119,7 +123,9 @@ class CtmAlg:
             # Save sum of singular values
             self.sv_sums.append(np.sum(s))
 
-            if abs(self.sv_sums[-1] - self.sv_sums[-2]) < tol:
+            tol_counter += 1 if abs(self.sv_sums[-1] - self.sv_sums[-2]) < tol else 0
+
+            if tol_counter == count:
                 break
 
         # Save the computational time and number of iterations
@@ -135,9 +141,11 @@ class CtmAlg:
 
         Returns an array of the new corner tensor of shape (chi, chi)
         """
-        return ncon(
-            [U, self.new_M(), U],
-            ([-1, 2, 1], [1, 2, 3, 4], [-2, 4, 3]),
+        return np.array(
+            ncon(
+                [U, self.new_M(), U],
+                ([-1, 2, 1], [1, 2, 3, 4], [-2, 4, 3]),
+            )
         )
 
     def new_M(self) -> np.ndarray:
@@ -147,9 +155,11 @@ class CtmAlg:
 
         Returns a array of the contracted corner of shape (chi, d, chi, d).
         """
-        return ncon(
-            [self.C, self.T, self.T, self.a],
-            ([1, 2], [-1, 1, 3], [2, -3, 4], [-2, 3, 4, -4]),
+        return np.array(
+            ncon(
+                [self.C, self.T, self.T, self.a],
+                ([1, 2], [-1, 1, 3], [2, -3, 4], [-2, 3, 4, -4]),
+            )
         )
 
     def new_T(self, U: np.ndarray, fixed=False) -> np.ndarray:
@@ -165,9 +175,11 @@ class CtmAlg:
         """
         T = self.T_fixed if fixed else self.T
         M = ncon([T, self.a], ([-1, -2, 1], [1, -3, -4, -5]))
-        return ncon(
-            [U, M, U],
-            ([-1, 3, 1], [1, 2, 3, 4, -3], [-2, 4, 2]),
+        return np.array(
+            ncon(
+                [U, M, U],
+                ([-1, 3, 1], [1, 2, 3, 4, -3], [-2, 4, 2]),
+            )
         )
 
     def new_U(self, M: np.ndarray, trunc=True) -> tuple[np.ndarray, np.ndarray]:
@@ -198,7 +210,7 @@ class CtmAlg:
             U, s, _ = scipy.sparse.linalg.svds(M, k=self.chi, which="LM")
         else:
             # Also increase chi when using the untruncated U.
-            self.chi *= 2
+            self.chi *= self.d
             U, s, _ = scipy.linalg.svd(M)
 
         # Reshape U back in a three legged tensor and transpose. Normalize the singular values.
