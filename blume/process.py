@@ -2,6 +2,8 @@ import json
 import matplotlib.pyplot as plt
 import numpy as np
 import typing
+import pathlib
+import os
 
 from .model.post_props import Prop, PropFunction
 
@@ -45,7 +47,9 @@ def read(folder: str, fn: str) -> dict:
     fn (str): file name of the json file.
     val (int): value of the parameter corresponding to the desired file to read.
     """
-    with open(f"data/{folder}/{fn}.json", "r") as f:
+    root_dir = pathlib.Path(__file__).parent.parent
+    path = os.path.join(root_dir, f"data/{folder}/{fn}.json")
+    with open(path, "r") as f:
         return dict(json.loads(f.read()))
 
 
@@ -62,8 +66,13 @@ def compute(
 
     Returns a list with the computed property for all temperatures in data.
     """
+    if "temperatures" in data:
+        temps = data["temperatures"]
+    else:
+        temps = [data["temperature"] for _ in range(len(data["a tensors"]))]
+
     data_zip = zip(
-        data["temperatures"],
+        temps,
         np.asarray(data["converged corners"]),
         np.asarray(data["converged edges"]),
         np.asarray(data["converged fixed edges"]),

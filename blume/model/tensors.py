@@ -44,15 +44,15 @@ class Tensors:
                 np.array(
                     [
                         [
-                            np.exp((1 - c) * self.beta),
-                            np.exp(-c * self.beta),
-                            np.exp(-(1 + c) * self.beta),
+                            np.exp((1 - c / 2) * self.beta),
+                            np.exp(-c / 2 * self.beta),
+                            np.exp(-(1 + c / 2) * self.beta),
                         ],
                         [1, 1, 1],
                         [
-                            np.exp(-(1 + c) * self.beta),
-                            np.exp(-c * self.beta),
-                            np.exp((1 - c) * self.beta),
+                            np.exp(-(1 + c / 2) * self.beta),
+                            np.exp(-c / 2 * self.beta),
+                            np.exp((1 - c / 2) * self.beta),
                         ],
                     ]
                 )

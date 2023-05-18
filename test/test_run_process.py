@@ -18,11 +18,11 @@ class TestRun(unittest.TestCase):
         max_steps_test = Results("max_steps", TestRun.max_steps_list)
         fixed_test = Results()
 
-        params = ModelParameters(T_range=[2.5, 2.6, 2.6], bar=False)
+        params = ModelParameters(var_range=[2.5, 2.6, 2.6], bar=False)
         chi_test.get(params)
         max_steps_test.get(params)
         fixed_test.get(
-            ModelParameters(T_range=[2.5, 2.7], b_c=True, fixed=True, bar=False)
+            ModelParameters(var_range=[2.5, 2.7], b_c=True, fixed=True, bar=False)
         )
 
     def test_new_folder(self):

@@ -4,6 +4,7 @@ import numpy as np
 import json
 from tqdm import tqdm
 import os
+import pathlib
 from datetime import datetime
 from dataclasses import dataclass
 
@@ -29,7 +30,8 @@ class ModelParameters:
     """
 
     model: str = "ising"
-    T_range: list | tuple = (2, 2.3)
+    var_range: list | tuple = ((2, 2.3),)
+    temperature: float = 1
     coupling: float = 1
     step: float = 0.001
     tol: float = 1e-7
@@ -53,7 +55,7 @@ class Results:
         self.range = range
         self.default_params = ModelParameters()
 
-    def get(self, params: ModelParameters | None):
+    def get(self, params: ModelParameters | None, sweeping_param="temperature"):
         """
         Execute the algorithm, varying the given parameters and for the given
         model parameters. Save the data in a directory with the datetime as name.
@@ -69,13 +71,13 @@ class Results:
         if self.varying_param:
             for val in self.range:
                 setattr(params, self.varying_param, val)
-                data = self.sweep_T(params)
+                data = self.sweep_var(params, sweeping_param)
                 self.save(data, params.bar)
         else:
-            data = self.sweep_T(params)
+            data = self.sweep_var(params, sweeping_param)
             self.save(data, params.bar)
 
-    def sweep_T(self, params: ModelParameters):
+    def sweep_var(self, params: ModelParameters, sweeping_param: str):
         """
         Sweep temperature for the given range and stepsize and execute the CTM algorithm.
         Return data containing the algorithm parameters and properties extracted during
@@ -90,10 +92,10 @@ class Results:
         C_init, T_init = (None, None)
 
         # Allow a list or range tuple for `T_range`.
-        temps = (
-            params.T_range
-            if isinstance(params.T_range, list)
-            else np.arange(params.T_range[0], params.T_range[1], params.step)
+        params_to_sweep = (
+            params.var_range
+            if isinstance(params.var_range, list)
+            else np.arange(params.var_range[0], params.var_range[1], params.step)
         )
 
         # Display which parameter value it is evaluating.
@@ -102,9 +104,11 @@ class Results:
             if self.varying_param
             else None
         )
-        for T in tqdm(temps, desc=desc, disable=not (params.bar)):  # type: ignore
+
+        for param in tqdm(params_to_sweep, desc=desc, disable=not (params.bar)):  # type: ignore
+            setattr(params, sweeping_param, param)
             alg = CtmAlg(
-                1 / T,
+                1 / params.temperature,
                 model=params.model,
                 coupling=params.coupling,
                 chi=params.chi,
@@ -123,7 +127,7 @@ class Results:
             data.append(
                 (
                     alg.n_iter,
-                    T,
+                    param,
                     alg.C,
                     alg.T,
                     alg.T_fixed,
@@ -135,7 +139,7 @@ class Results:
             )
 
         # Return both the parameters and algorithm data in the same dict.
-        return params.__dict__ | data_to_dict(data)
+        return params.__dict__ | data_to_dict(data, sweeping_param)
 
     def save(self, data: dict, msg: bool):
         """
@@ -155,21 +159,23 @@ class Results:
         else:
             fn = "data"
 
-        with open(f"data/{self.dir}/{fn}.json", "w") as fp:
+        root_dir = pathlib.Path(__file__).parent.parent
+        path = os.path.join(root_dir, f"data/{self.dir}/{fn}.json")
+        with open(path, "w") as fp:
             json.dump(data, fp, cls=NumpyEncoder)
 
         if msg:
             print("Done \n")
 
 
-def data_to_dict(data: list) -> dict:
+def data_to_dict(data: list, sweeping_param: str) -> dict:
     """
     Convert the list with tuple of the data to a dict.
     """
     data = list(zip(*data))  # unpack
     return {
         "number of iterations": data[0],
-        "temperatures": data[1],
+        f"{sweeping_param}s": data[1],
         "converged corners": data[2],
         "converged edges": data[3],
         "converged fixed edges": data[4],
@@ -188,8 +194,10 @@ def new_folder():
     Returns the folder name as string.
     """
     now = datetime.now().strftime("%d-%m %H:%M")
-    if not os.path.isdir(f"data/{now}"):
-        os.mkdir(f"data/{now}")
+    root_dir = pathlib.Path(__file__).parent.parent
+    path = os.path.join(root_dir, f"data/{now}")
+    if not os.path.isdir(path):
+        os.mkdir(path)
     return now
 
 
