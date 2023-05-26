@@ -19,6 +19,7 @@ class CtmAlg:
     `beta` (float): Equivalent to the inverse of the temperature.
     `model` (str): "ising" or "blume"
     `coupling` (float): crystal-field coupling parameter for the Blume-Capel model.
+    `h` (float): External magnetic field parameter.
     `b_c` (bool): If true the edge and corner tensors are initialized with the
     boundary condition (bc) tensors, else random.
     `fixed` (bool): If true fix the spin on the the edge to one spin. Only
@@ -36,13 +37,14 @@ class CtmAlg:
         beta: float,
         model="ising",
         coupling=1,
+        h=0,
         b_c=False,
         fixed=False,
         chi=2,
         C_init=None,
         T_init=None,
     ):
-        self.tensors = Tensors(beta, model, coupling)
+        self.tensors = Tensors(beta, model, coupling, h)
         self.d = self.tensors.d
         self.beta = beta
         self.b_c = b_c

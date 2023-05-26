@@ -13,9 +13,11 @@ from dataclasses import dataclass
 class ModelParameters:
     """
     `model` (str): "ising" or "blume".
-    `T_range` (tuple | list): Temperature range or list to sweep.
+    `var_range` (tuple | list): variable range or list to sweep.
+    `temperature` (float): Temperature of the system.
     `coupling` (float): Crystal-field coupling parameter, only applies to
     Blume-Capel model.
+    `h` (float): External magnetic field parameter.
     `step` (float): Stepsize of the varying temperature.
     `tol` (float): Convergence criterion.
     `chi` (int): Bond dimension.
@@ -33,6 +35,7 @@ class ModelParameters:
     var_range: list | tuple = ((2, 2.3),)
     temperature: float = 1
     coupling: float = 1
+    h: float = 0
     step: float = 0.001
     tol: float = 1e-7
     count: int = 10
@@ -48,6 +51,9 @@ class Results:
     """
     Class for executing the CTM algorithm for a varying parameter and saving
     the data.
+
+    varying_param (str): desired parameter to vary.
+    range (list): list of parameter values to vary.
     """
 
     def __init__(self, varying_param=None, range=None):
@@ -62,6 +68,7 @@ class Results:
 
         `params` (ModelParameters): class instance of the dataclass containing the
         model parameters.
+        `sweeping_param` (str): desired parameter to sweep.
         """
         self.dir = new_folder()
 
@@ -85,6 +92,7 @@ class Results:
 
         `params` (ModelParameters): class instance of the dataclass containing the
         model parameters.
+        `sweep_param` (str): parameter to sweep.
 
         Returns a dict containing the ModelParameters and algorithm data.
         """
@@ -111,6 +119,7 @@ class Results:
                 1 / params.temperature,
                 model=params.model,
                 coupling=params.coupling,
+                h=params.h,
                 chi=params.chi,
                 C_init=C_init,
                 T_init=T_init,
@@ -147,7 +156,6 @@ class Results:
         folder.
 
         `data` (dict): dictionary containing the data.
-        `dir` (str): Directory where the data is saved.
         `msg` (bool): If true, print a message at the start and end of saving.
         """
         if msg:

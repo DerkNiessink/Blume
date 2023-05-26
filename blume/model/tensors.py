@@ -14,11 +14,13 @@ class Tensors:
     beta (float): Beta for the system, equivalent to 1 / temperature.
     model (str): "ising" or "blume".
     coupling (float): Crystal-field coupling parameter for the system.
+    h (float): External magnetic field parameter.
     """
 
     beta: float = 0.5
     model: str = "ising"
     coupling: float = 1
+    h: float = 0
     d: int = field(init=False)
     Q: np.ndarray = field(init=False)
 
@@ -39,20 +41,19 @@ class Tensors:
             )
         else:
             self.d = 3
-            c = self.coupling
             self.Q = sqrtm(
                 np.array(
                     [
                         [
-                            np.exp((1 - c / 2) * self.beta),
-                            np.exp(-c / 2 * self.beta),
-                            np.exp(-(1 + c / 2) * self.beta),
+                            np.exp(self.beta),
+                            1,
+                            np.exp(-self.beta),
                         ],
                         [1, 1, 1],
                         [
-                            np.exp(-(1 + c / 2) * self.beta),
-                            np.exp(-c / 2 * self.beta),
-                            np.exp((1 - c / 2) * self.beta),
+                            np.exp(-self.beta),
+                            1,
+                            np.exp(self.beta),
                         ],
                     ]
                 )
@@ -74,10 +75,38 @@ class Tensors:
         A = np.zeros(shape)
         for index in np.ndindex(shape):
             # If all indices are the same change value to 1, or if adj=True only
-            # if all indices are 0.
+            # if all indices are 0.   delta: np.ndarray = field(init=False)
             k = 0 if adj else index[0]
             if index.count(k) == len(index):
                 A[index] = 1
+        return A
+
+    def coupling_delta(self, dimension: int, adj=False) -> np.ndarray:
+        """
+        Returns a kronecker delta matrix for the Blume-Capel model of a
+        specific dimension.
+
+        `dimension` (tuple): desired dimension of the kronecker delta matrix.
+        `adj` (bool): If true, an adjusted delta matrix is returned, which
+        is fixed with only a spin -1.
+        """
+        shape = tuple((self.d for _ in range(dimension)))
+        A = np.zeros(shape)
+
+        if adj:
+            for index in np.ndindex(shape):
+                # Set only the -1 spin.
+                if index.count(0) == len(index):
+                    A[index] = np.exp(-self.beta * (self.coupling + self.h))
+                    return A
+
+        for index in np.ndindex(shape):
+            if index.count(0) == len(index):
+                A[index] = np.exp(-self.beta * (self.coupling + self.h))
+            if index.count(1) == len(index):
+                A[index] = 1
+            if index.count(2) == len(index):
+                A[index] = np.exp(-self.beta * (self.coupling - self.h))
         return A
 
     @staticmethod
@@ -98,7 +127,11 @@ class Tensors:
         `adj` (bool): If true the adjusted delta will be used for the lattice
         site, which fixes the corner spin to one direction.
         """
-        delta = self.delta((self.d, self.d, self.d, self.d), adj)
+        delta = (
+            self.delta((self.d, self.d, self.d, self.d), adj)
+            if self.model == "ising"
+            else self.coupling_delta(4, adj)
+        )
         return np.array(
             ncon(
                 [self.Q, self.Q, self.Q, self.Q, delta],
@@ -114,10 +147,11 @@ class Tensors:
         `adj` (bool): If true the adjusted delta will be used for the lattice
         site, which fixes the corner spin to one direction.
         """
-        delta = self.delta((self.d, self.d, self.d, self.d), adj)
         if self.model == "ising":
+            delta = self.delta((self.d, self.d, self.d, self.d), adj)
             delta[1, :, :, :] *= -1.0
         else:
+            delta = self.coupling_delta(4, adj)
             delta[0, :, :, :] *= -1.0
             delta[1, :, :, :] *= 0
 
@@ -135,9 +169,14 @@ class Tensors:
         `adj` (bool): If true the adjusted delta will be used for the lattice
         site, which fixes the corner spin to one direction.
         """
+        delta = (
+            self.delta((self.d, self.d), adj)
+            if self.model == "ising"
+            else self.coupling_delta(2, adj)
+        )
         return np.array(
             ncon(
-                [self.Q, self.delta((self.d, self.d), adj), self.Q],
+                [self.Q, delta, self.Q],
                 ([1, -1], [1, 2], [-2, 2]),
             )
         )
@@ -149,9 +188,14 @@ class Tensors:
         `adj` (bool): If true the adjusted delta will be used for the lattice
         site, which fixes the edge spin to one direction.
         """
+        delta = (
+            self.delta((self.d, self.d, self.d), adj)
+            if self.model == "ising"
+            else self.coupling_delta(3, adj)
+        )
         return np.array(
             ncon(
-                [self.Q, self.Q, self.Q, self.delta((self.d, self.d, self.d), adj)],
+                [self.Q, self.Q, self.Q, delta],
                 ([-1, 1], [-2, 2], [-3, 3], [1, 2, 3]),
             )
         )
