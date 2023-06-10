@@ -158,6 +158,7 @@ class Results:
         `data` (dict): dictionary containing the data.
         `msg` (bool): If true, print a message at the start and end of saving.
         """
+
         if msg:
             print(f"Saving data in folder: '{self.dir}'")
 
@@ -169,6 +170,7 @@ class Results:
 
         root_dir = pathlib.Path(__file__).parent.parent
         path = os.path.join(root_dir, f"data/{self.dir}/{fn}.json")
+
         with open(path, "w") as fp:
             json.dump(data, fp, cls=NumpyEncoder)
 
@@ -204,9 +206,18 @@ def new_folder():
     now = datetime.now().strftime("%d-%m %H:%M")
     root_dir = pathlib.Path(__file__).parent.parent
     path = os.path.join(root_dir, f"data/{now}")
-    if not os.path.isdir(path):
-        os.mkdir(path)
-    return now
+
+    # Don't overwrite already existing directory
+    fn = now
+    right_path = path
+    i = 1
+    while os.path.isdir(f"{right_path}"):
+        right_path = f"{path}({i})"
+        fn = f"{now}({i})"
+        i += 1
+
+    os.mkdir(right_path)
+    return fn
 
 
 class NumpyEncoder(json.JSONEncoder):
