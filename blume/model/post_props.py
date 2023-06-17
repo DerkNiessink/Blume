@@ -119,7 +119,7 @@ class Prop:
     @staticmethod
     def xi(data: dict) -> float:
         """
-        Return the correlation length of the system.
+        Return a tuple of the correlation length of the system
         """
         C, T, T_fixed, beta, a, a_fixed, b, b_fixed = unpack(data)
         M = ncon([T, T], ([-1, -3, 3], [-2, -4, 3]))
@@ -127,6 +127,17 @@ class Prop:
         M = M.reshape(T.shape[0] ** 2, T.shape[0] ** 2)
         w = scipy.linalg.eigh(M, eigvals_only=True)
         return float(1 / np.log(abs(w[-1]) / abs(w[-2])))
+
+    def delta(data: dict) -> float:
+        """
+        Return the refinement parameter delta of the transfer matrix
+        """
+        C, T, T_fixed, beta, a, a_fixed, b, b_fixed = unpack(data)
+        M = ncon([T, T], ([-1, -3, 3], [-2, -4, 3]))
+        # Reshape to matrix
+        M = M.reshape(T.shape[0] ** 2, T.shape[0] ** 2)
+        w = scipy.linalg.eigh(M, eigvals_only=True)
+        return -np.log(abs[w[-4]]) - -np.log(abs[w[-3]])
 
     @staticmethod
     def Z_fixed(data: dict) -> float:
