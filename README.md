@@ -11,3 +11,14 @@ Application for evaluating the Blume-Capel (BC) model using the Corner Transfer 
 
 
 ## Usage 
+
+```python 
+import blume
+
+result = blume.run.Results(varying_param="coupling", range=[0, 0.5, 1, 1.5])
+params = blume.run.ModelParameters(model = "blume", var_range=(0.1, 1.75), step=0.001, tol=1e-9, max_steps=int(10e9), use_prev=True, chi=16)
+result.get(params)
+
+
+  
+```
