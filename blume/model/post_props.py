@@ -3,7 +3,7 @@ from ncon import ncon
 import scipy.linalg
 import scipy.sparse.linalg
 from typing import Callable
-
+from sklearn import preprocessing
 
 PropFunction = Callable[[dict], float]
 
@@ -128,6 +128,7 @@ class Prop:
         w = scipy.linalg.eigh(M, eigvals_only=True)
         return float(1 / np.log(abs(w[-1]) / abs(w[-2])))
 
+    @staticmethod
     def delta(data: dict) -> float:
         """
         Return the refinement parameter delta of the transfer matrix
@@ -136,8 +137,12 @@ class Prop:
         M = ncon([T, T], ([-1, -3, 3], [-2, -4, 3]))
         # Reshape to matrix
         M = M.reshape(T.shape[0] ** 2, T.shape[0] ** 2)
-        w = scipy.linalg.eigh(M, eigvals_only=True)
-        return -np.log(abs[w[-4]]) - -np.log(abs[w[-3]])
+        w = list(scipy.linalg.eigh(M, eigvals_only=True))
+        w.reverse()
+        w = [el / w[0] for el in w]
+        eps2 = -np.log(w[1])
+        eps5 = -np.log(w[4])
+        return float(eps5 - eps2)
 
     @staticmethod
     def Z_fixed(data: dict) -> float:
