@@ -39,7 +39,7 @@ class TestRun(unittest.TestCase):
         for max_step in TestRun.max_steps_list:
             with self.subTest():
                 self.assertTrue(
-                    os.path.isfile(f"data/{TestRun.now}/max_steps{max_step}.json")
+                    os.path.isfile(f"data/{TestRun.now}(1)/max_steps{max_step}.json")
                 )
 
         for chi in TestRun.chi_list:
@@ -47,7 +47,7 @@ class TestRun(unittest.TestCase):
                 self.assertTrue(os.path.isfile(f"data/{TestRun.now}/chi{chi}.json"))
 
         with self.subTest():
-            self.assertTrue(os.path.isfile(f"data/{TestRun.now}/data.json"))
+            self.assertTrue(os.path.isfile(f"data/{TestRun.now}(2)/data.json"))
 
     def test_contents(self):
         """
@@ -69,7 +69,7 @@ class TestRun(unittest.TestCase):
                     with self.subTest():
                         self.assertFalse(data[key] == [])
 
-        data = read(TestRun.now, "data")
+        data = read(f"{TestRun.now}(2)", "data")
         # Check that it saves the fixed edges.
         with self.subTest():
             self.assertFalse(data["converged fixed edges"][1] == None)
@@ -77,6 +77,8 @@ class TestRun(unittest.TestCase):
     @classmethod
     def tearDownClass(cls):
         """
-        Remove the new directory after all tests.
+        Remove the new directories after all tests.
         """
         shutil.rmtree(f"data/{cls.now}")
+        shutil.rmtree(f"data/{cls.now}(1)")
+        shutil.rmtree(f"data/{cls.now}(2)")
